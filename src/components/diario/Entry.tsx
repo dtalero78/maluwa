@@ -5,6 +5,33 @@ interface EntryProps {
   onSuggestionClick?: (s: string) => void;
 }
 
+/* Paleta de stickers tipo "notebook label" — colores saturados como en la
+   referencia. `bg` es el fondo coloreado del label, `line` es el color de
+   los renglones discontinuos del área blanca interior, `icon` es un emoji
+   pequeño que se muestra a la izquierda. */
+const STICKER_STYLES = [
+  { bg: "#4fb3ff", line: "#88c9f9", icon: "📚" }, // azul
+  { bg: "#57c595", line: "#a3e4c8", icon: "✏️" }, // verde
+  { bg: "#f47fae", line: "#fbb4d0", icon: "💖" }, // rosa
+  { bg: "#fbbf24", line: "#fde0a3", icon: "⭐" }, // amarillo
+  { bg: "#a78bfa", line: "#d4c4ff", icon: "🎨" }, // violeta
+  { bg: "#fb7d3f", line: "#fdb993", icon: "🔥" }, // naranja
+];
+
+function pickStickerStyle(seed: string) {
+  // FNV-1a hash. Después de cada Math.imul el resultado es int32 con
+  // signo, por eso forzamos a uint32 con `>>> 0` antes de tomar módulo.
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h = (h ^ seed.charCodeAt(i)) >>> 0;
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  const palette = STICKER_STYLES[h % STICKER_STYLES.length];
+  // Tilt entre -2.5° y +2.5°, derivado del mismo hash para que sea estable.
+  const tiltDeg = (((h >>> 8) % 11) - 5) * 0.5;
+  return { ...palette, tiltDeg };
+}
+
 export function Entry({ entry, onSuggestionClick }: EntryProps) {
   if (entry.kind === "question") {
     return (
@@ -35,11 +62,46 @@ export function Entry({ entry, onSuggestionClick }: EntryProps) {
   }
 
   if (entry.kind === "answer") {
+    const sticker = pickStickerStyle(entry.id);
     return (
-      <div className="entry-in mb-[36px]">
-        <p className="font-hand text-right text-[28px] text-[var(--color-ink)]">
-          {entry.text}
-        </p>
+      <div className="entry-in mb-[36px] flex justify-end">
+        <div
+          className="sticker-answer relative flex max-w-[88%] items-center gap-3 overflow-hidden rounded-[18px] p-3 shadow-[0_4px_12px_rgba(0,0,0,0.12)]"
+          style={{
+            backgroundColor: sticker.bg,
+            transform: `rotate(${sticker.tiltDeg}deg)`,
+          }}
+        >
+          {/* Mancha decorativa de fondo (esquina superior izquierda) */}
+          <span
+            aria-hidden
+            className="absolute -top-5 -left-5 h-20 w-20 rounded-full"
+            style={{ background: "rgba(255,255,255,0.2)" }}
+          />
+          {/* Ícono cuadrado blanco con emoji */}
+          <span
+            aria-hidden
+            className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border-4 border-white bg-white text-3xl shadow-[3px_3px_0px_rgba(0,0,0,0.1)]"
+          >
+            {sticker.icon}
+          </span>
+          {/* Área blanca con texto sobre renglones discontinuos */}
+          <div
+            className="relative z-10 flex-1 rounded-xl bg-white px-3 py-2"
+            style={{
+              backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='36' viewBox='0 0 400 36' preserveAspectRatio='none'><line x1='0' y1='32' x2='400' y2='32' stroke='${encodeURIComponent(sticker.line)}' stroke-width='2' stroke-dasharray='7,6'/></svg>")`,
+              backgroundSize: "100% 36px",
+              backgroundRepeat: "repeat",
+            }}
+          >
+            <p
+              className="font-hand text-[26px] text-[var(--color-ink)]"
+              style={{ lineHeight: "36px" }}
+            >
+              {entry.text}
+            </p>
+          </div>
+        </div>
       </div>
     );
   }

@@ -27,33 +27,33 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Renglones del cuaderno — atados al line-height del texto.
-   El "ritmo" es 36px: cada línea de texto cae sobre la línea inferior del
-   renglón, replicando la convención de un cuaderno real. */
-/* Renglones del cuaderno. La línea cae en y=23 dentro del renglón de 36px,
-   que coincide con el baseline natural de Lora 16/36 (top + half-leading +
-   ascent ≈ 23). Así cualquier letra "se sienta" visualmente sobre la línea
-   y los descenders ('g', 'p', 'q') la cortan, como en un cuaderno real. */
+/* Renglones del cuaderno, muy tenues — solo dan ritmo visual sin imponerse. */
 .diary-ruled {
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0,
     transparent 23px,
-    rgba(94, 71, 34, 0.35) 23px,
-    rgba(94, 71, 34, 0.35) 24px
+    rgba(94, 71, 34, 0.1) 23px,
+    rgba(94, 71, 34, 0.1) 24px
   );
   background-size: 100% 36px;
   background-position: 0 0;
   background-repeat: repeat;
 }
 
-/* Tipografía consistente con el ritmo de los renglones */
+/* Tipografía consistente con el ritmo del feed */
 .diary-feed-inner {
   font-size: 16px;
   line-height: 36px;
 }
 .diary-feed-inner * {
   line-height: 36px !important;
+}
+/* Los stickers de respuesta tienen su propio ritmo (texto handwritten
+   compacto), así que sobreescribimos el line-height global. */
+.diary-feed-inner .sticker-answer,
+.diary-feed-inner .sticker-answer * {
+  line-height: 1.15 !important;
 }
 
 /* Aparición suave de entradas del diario */
