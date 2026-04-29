@@ -39,8 +39,8 @@ html, body {
     to bottom,
     transparent 0,
     transparent 23px,
-    rgba(94, 71, 34, 0.85) 23px,
-    rgba(94, 71, 34, 0.85) 24px
+    rgba(94, 71, 34, 0.35) 23px,
+    rgba(94, 71, 34, 0.35) 24px
   );
   background-size: 100% 36px;
   background-position: 0 0;
