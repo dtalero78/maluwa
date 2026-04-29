@@ -40,3 +40,7 @@ coverage/
 .turbo/
 *.tsbuildinfo
 next-env.d.ts
+
+# Playwright dev artifacts (screenshots tomados durante desarrollo)
+.playwright-mcp/
+/*.png

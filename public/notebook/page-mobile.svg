@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1242" height="2208" viewBox="0 0 1242 2208">
+  <defs>
+    
+    <filter id="paperGrainM" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="5"></feTurbulence>
+      <feColorMatrix values="0 0 0 0 0.86&#xA;                             0 0 0 0 0.71&#xA;                             0 0 0 0 0.51&#xA;                             0 0 0 0.10 0"></feColorMatrix>
+      <feComposite in2="SourceGraphic" operator="in"></feComposite>
+    </filter>
+
+    
+    <filter id="warmGrainM">
+      <feTurbulence type="fractalNoise" baseFrequency="2.5" numOctaves="2" seed="9"></feTurbulence>
+      <feColorMatrix values="0 0 0 0 0.92&#xA;                             0 0 0 0 0.78&#xA;                             0 0 0 0 0.55&#xA;                             0 0 0 0.05 0"></feColorMatrix>
+    </filter>
+
+    
+    <radialGradient id="lightWashM" cx="25%" cy="15%" r="90%">
+      <stop offset="0%" stop-color="#fff8e8" stop-opacity="0.85"></stop>
+      <stop offset="55%" stop-color="#f4ecdc" stop-opacity="0"></stop>
+      <stop offset="100%" stop-color="#d4b48a" stop-opacity="0.18"></stop>
+    </radialGradient>
+
+    
+    <pattern id="rules" x="0" y="0" width="100" height="64" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="32" x2="100" y2="32" stroke="#d8c39e" stroke-width="1.4" opacity="0.45"></line>
+    </pattern>
+
+    
+    <filter id="deckle" x="-2%" y="-2%" width="104%" height="104%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="3" seed="6"></feTurbulence>
+      <feDisplacementMap in="SourceGraphic" scale="9"></feDisplacementMap>
+    </filter>
+
+    
+    <filter id="pageShadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feGaussianBlur stdDeviation="14"></feGaussianBlur>
+    </filter>
+
+    
+    <filter id="paintBar">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04 0.6" numOctaves="2" seed="2"></feTurbulence>
+      <feDisplacementMap in="SourceGraphic" scale="4"></feDisplacementMap>
+    </filter>
+  </defs>
+
+  
+  <rect width="1242" height="2208" fill="#fdf6e8"></rect>
+
+  
+  <g opacity="0.35" filter="url(#pageShadow)">
+    <rect x="20" y="30" width="1202" height="2160" fill="#a88a5a" filter="url(#deckle)"></rect>
+  </g>
+
+  
+  <g filter="url(#deckle)">
+    <rect x="0" y="0" width="1242" height="2208" fill="#f4ecdc"></rect>
+  </g>
+
+  
+  <rect width="1242" height="2208" filter="url(#warmGrainM)" opacity="0.55"></rect>
+
+  
+  <rect width="1242" height="2208" fill="url(#lightWashM)"></rect>
+
+  
+  <rect width="1242" height="2208" filter="url(#paperGrainM)" opacity="0.45"></rect>
+
+  
+  <g filter="url(#paintBar)">
+    
+    <rect x="60" y="1556" width="1122" height="38" rx="6" ry="6" fill="#c25a30" opacity="0.25"></rect>
+    
+    <rect x="60" y="1546" width="1122" height="38" rx="6" ry="6" fill="#e57c4a"></rect>
+    
+    <rect x="60" y="1548" width="1122" height="6" rx="3" ry="3" fill="#f6cfb6" opacity="0.5"></rect>
+    
+    <rect x="566" y="1538" width="110" height="22" rx="4" ry="4" fill="#c25a30"></rect>
+  </g>
+</svg>

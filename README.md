@@ -15,7 +15,11 @@ Una herramienta gratuita y open-source pensada para pelados de bachillerato de e
 
 ## Estado
 
-🚧 En diseño. Sin código todavía. El marco estratégico vive en [docs/MARCO.md](docs/MARCO.md).
+🚧 En diseño. Sin código todavía.
+
+- Marco estratégico: [docs/MARCO.md](docs/MARCO.md)
+- Alcance del MVP v1: [docs/MVP.md](docs/MVP.md)
+- Proyectos del currículo de bifurcación: [docs/PROYECTOS.md](docs/PROYECTOS.md)
 
 ## Licencia
 

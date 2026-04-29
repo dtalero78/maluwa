@@ -1,0 +1,39 @@
+import type { Metadata, Viewport } from "next";
+import { Caveat, Lora } from "next/font/google";
+import "./globals.css";
+
+const caveat = Caveat({
+  subsets: ["latin"],
+  variable: "--font-hand",
+  display: "swap",
+});
+
+const lora = Lora({
+  subsets: ["latin"],
+  variable: "--font-serif",
+  display: "swap",
+});
+
+export const metadata: Metadata = {
+  title: "Maluwa — construye lo que se te ocurra, con IA",
+  description:
+    "Plataforma para adolescentes hispanohablantes que enseña a crear páginas web y apps con IA, paso a paso, en un diario.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#fdf6e8",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="es" className={`${caveat.variable} ${lora.variable}`}>
+      <body className="min-h-screen">{children}</body>
+    </html>
+  );
+}
