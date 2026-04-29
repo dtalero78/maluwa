@@ -21,13 +21,36 @@ export function Diary({ initialEntries }: DiaryProps) {
   const feedRefDesktop = useRef<HTMLDivElement>(null);
   const feedRefMobile = useRef<HTMLDivElement>(null);
 
-  // Scroll al fondo cada vez que aparece una nueva entrada. useLayoutEffect
-  // se ejecuta tras cada DOM mutation y antes del paint, así scrollHeight
-  // ya refleja el contenido recién añadido.
+  // Scroll: cuando la IA agrega una respuesta nueva, llevamos al usuario al
+  // INICIO de esa respuesta (no al fondo del feed). Si solo hay actividad del
+  // estudiante (su respuesta recién enviada), sí bajamos al fondo para que
+  // vea su mensaje. useLayoutEffect garantiza que scrollHeight ya refleja el
+  // DOM nuevo antes del paint.
   useLayoutEffect(() => {
+    // Encuentra el índice de la primera entry IA después del último answer.
+    let firstNewAiIndex = -1;
+    for (let i = entries.length - 1; i >= 0; i--) {
+      if (entries[i].kind === "answer") break;
+      if (entries[i].role === "ai") firstNewAiIndex = i;
+    }
+
     for (const el of [feedRefDesktop.current, feedRefMobile.current]) {
       if (!el) continue;
-      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      if (firstNewAiIndex === -1) {
+        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+        continue;
+      }
+      const target = el.querySelector<HTMLElement>(
+        `[data-entry-idx="${firstNewAiIndex}"]`,
+      );
+      if (target) {
+        // Pequeño respiro arriba para que la primera línea no quede pegada
+        // al borde del feed.
+        const top = Math.max(0, target.offsetTop - 12);
+        el.scrollTo({ top, behavior: "smooth" });
+      } else {
+        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      }
     }
   }, [entries, waiting]);
 
@@ -125,12 +148,13 @@ export function Diary({ initialEntries }: DiaryProps) {
                 }}
               >
                 <div className="diary-feed-inner pt-[36px] pb-6">
-                  {entries.map((entry) => (
-                    <Entry
-                      key={entry.id}
-                      entry={entry}
-                      onSuggestionClick={(s) => send(s)}
-                    />
+                  {entries.map((entry, i) => (
+                    <div key={entry.id} data-entry-idx={i}>
+                      <Entry
+                        entry={entry}
+                        onSuggestionClick={(s) => send(s)}
+                      />
+                    </div>
                   ))}
                   {waiting && <TypingIndicator />}
                 </div>
@@ -192,12 +216,13 @@ export function Diary({ initialEntries }: DiaryProps) {
                 }}
               >
                 <div className="diary-feed-inner pt-[40px] pb-4">
-                  {entries.map((entry) => (
-                    <Entry
-                      key={entry.id}
-                      entry={entry}
-                      onSuggestionClick={(s) => send(s)}
-                    />
+                  {entries.map((entry, i) => (
+                    <div key={entry.id} data-entry-idx={i}>
+                      <Entry
+                        entry={entry}
+                        onSuggestionClick={(s) => send(s)}
+                      />
+                    </div>
                   ))}
                   {waiting && <TypingIndicator />}
                 </div>

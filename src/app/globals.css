@@ -30,13 +30,17 @@ html, body {
 /* Renglones del cuaderno — atados al line-height del texto.
    El "ritmo" es 36px: cada línea de texto cae sobre la línea inferior del
    renglón, replicando la convención de un cuaderno real. */
+/* Renglones del cuaderno. La línea cae en y=23 dentro del renglón de 36px,
+   que coincide con el baseline natural de Lora 16/36 (top + half-leading +
+   ascent ≈ 23). Así cualquier letra "se sienta" visualmente sobre la línea
+   y los descenders ('g', 'p', 'q') la cortan, como en un cuaderno real. */
 .diary-ruled {
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0,
-    transparent 31px,
-    rgba(94, 71, 34, 0.85) 31px,
-    rgba(94, 71, 34, 0.85) 32px
+    transparent 23px,
+    rgba(94, 71, 34, 0.85) 23px,
+    rgba(94, 71, 34, 0.85) 24px
   );
   background-size: 100% 36px;
   background-position: 0 0;
