@@ -1,5 +1,5 @@
 import { Diary } from "@/components/diario/Diary";
-import { getOpeningEntries } from "@/lib/diario/scripted-tutor";
+import { getOpeningEntries } from "@/lib/diario/claude-tutor";
 import type { DiaryEntry } from "@/lib/diario/types";
 
 export default async function DiaryPage({
