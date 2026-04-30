@@ -212,7 +212,16 @@ export function PublishModal({ open, onClose }: PublishModalProps) {
               />
               <span>
                 acepto que mi página será pública en internet y que mi mamá,
-                papá o tutor recibirá un aviso.
+                papá o tutor recibirá un aviso. he leído la{" "}
+                <a
+                  href="/privacidad"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-2 hover:text-[var(--color-ink)]"
+                >
+                  política de privacidad
+                </a>
+                .
               </span>
             </label>
 

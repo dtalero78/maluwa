@@ -57,6 +57,13 @@ export default function Landing() {
 
       <footer className="mt-16 border-t border-[var(--color-line)] pt-6 text-xs text-[var(--color-ink-soft)]">
         proyecto sin ánimo de lucro · hecho desde Colombia ·{" "}
+        <Link
+          href="/privacidad"
+          className="underline-offset-4 hover:underline"
+        >
+          privacidad
+        </Link>
+        {" · "}
         <a
           href="https://github.com/danieltalero/maluwa"
           className="underline-offset-4 hover:underline"
