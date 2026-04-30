@@ -5,6 +5,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type { DiaryEntry } from "@/lib/diario/types";
 import { Entry, TypingIndicator } from "./Entry";
 import { Composer } from "./Composer";
+import { PublishModal } from "./PublishModal";
 
 interface DiaryProps {
   initialEntries: DiaryEntry[];
@@ -14,6 +15,9 @@ export function Diary({ initialEntries }: DiaryProps) {
   const [entries, setEntries] = useState<DiaryEntry[]>(initialEntries);
   const [draft, setDraft] = useState("");
   const [waiting, setWaiting] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
+
+  const hasSnapshot = entries.some((e) => e.kind === "snapshot");
   // Dos refs porque renderizamos dos contenedores (desktop / mobile) — usar
   // un único ref asignado a ambos hace que React lo deje apuntando al último
   // renderizado (mobile, oculto con `md:hidden`), y el scroll no surte
@@ -108,12 +112,21 @@ export function Diary({ initialEntries }: DiaryProps) {
         style={{ bottom: "calc(33% + 18px)" }}
       />
 
-      {/* Composer */}
+      {/* Composer + (opcional) botón "publicar" */}
       <div
         className="absolute inset-x-0 bottom-0 px-8 pb-6"
         style={{ top: "67%" }}
       >
-        <div className="flex h-full items-center">
+        <div className="flex h-full flex-col justify-center gap-2">
+          {hasSnapshot && (
+            <button
+              type="button"
+              onClick={() => setPublishOpen(true)}
+              className="self-end rounded-full bg-[var(--color-accent)] px-4 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-[var(--color-accent-deep)]"
+            >
+              publicar mi página →
+            </button>
+          )}
           <Composer
             value={draft}
             onChange={setDraft}
@@ -179,6 +192,9 @@ export function Diary({ initialEntries }: DiaryProps) {
           </div>
         </div>
       </div>
+
+      {/* Modal de publicar */}
+      <PublishModal open={publishOpen} onClose={() => setPublishOpen(false)} />
 
       {/* MOBILE: solo la "pantalla" tablet sin la cubierta de cuero */}
       <div className="px-4 pt-2 pb-6 md:hidden">

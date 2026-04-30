@@ -71,6 +71,28 @@ CREATE INDEX IF NOT EXISTS idx_maluwa_ai_usage_created_at
   ON maluwa.ai_usage (created_at DESC);
 
 -- =====================================================================
+-- published_pages: HTML/CSS final que sirve la app cuando alguien visita
+-- maluwa.app/u/<slug>. Una fila por journal publicado. El snapshot se
+-- copia aquí en el momento del "publicar"; si el chico cambia algo
+-- después, su draft sigue editable pero la página pública queda igual
+-- hasta que pulse "republicar" (v0.5).
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS maluwa.published_pages (
+  id          uuid        PRIMARY KEY DEFAULT public.gen_random_uuid(),
+  slug        text        UNIQUE NOT NULL
+                CHECK (slug ~ '^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$'),
+  journal_id  uuid        NOT NULL REFERENCES maluwa.journals(id) ON DELETE CASCADE,
+  user_id     uuid        NOT NULL REFERENCES maluwa.users(id) ON DELETE CASCADE,
+  title       text,
+  html        text        NOT NULL,
+  css         text        NOT NULL DEFAULT '',
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_maluwa_published_user
+  ON maluwa.published_pages (user_id);
+
+-- =====================================================================
 -- Trigger para mantener updated_at fresco.
 -- =====================================================================
 CREATE OR REPLACE FUNCTION maluwa.touch_updated_at()
