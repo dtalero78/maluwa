@@ -16,24 +16,20 @@ export function Diary({ initialEntries }: DiaryProps) {
   const [waiting, setWaiting] = useState(false);
   // Dos refs porque renderizamos dos contenedores (desktop / mobile) — usar
   // un único ref asignado a ambos hace que React lo deje apuntando al último
-  // renderizado, que estaba oculto con `md:hidden`, y el scroll no surtía
+  // renderizado (mobile, oculto con `md:hidden`), y el scroll no surte
   // efecto en el visible.
   const feedRefDesktop = useRef<HTMLDivElement>(null);
   const feedRefMobile = useRef<HTMLDivElement>(null);
 
   // Scroll: cuando la IA agrega una respuesta nueva, llevamos al usuario al
-  // INICIO de esa respuesta (no al fondo del feed). Si solo hay actividad del
-  // estudiante (su respuesta recién enviada), sí bajamos al fondo para que
-  // vea su mensaje. useLayoutEffect garantiza que scrollHeight ya refleja el
-  // DOM nuevo antes del paint.
+  // INICIO de esa respuesta (no al fondo del feed). useLayoutEffect garantiza
+  // que scrollHeight ya refleja el DOM nuevo antes del paint.
   useLayoutEffect(() => {
-    // Encuentra el índice de la primera entry IA después del último answer.
     let firstNewAiIndex = -1;
     for (let i = entries.length - 1; i >= 0; i--) {
       if (entries[i].kind === "answer") break;
       if (entries[i].role === "ai") firstNewAiIndex = i;
     }
-
     for (const el of [feedRefDesktop.current, feedRefMobile.current]) {
       if (!el) continue;
       if (firstNewAiIndex === -1) {
@@ -44,8 +40,6 @@ export function Diary({ initialEntries }: DiaryProps) {
         `[data-entry-idx="${firstNewAiIndex}"]`,
       );
       if (target) {
-        // Pequeño respiro arriba para que la primera línea no quede pegada
-        // al borde del feed.
         const top = Math.max(0, target.offsetTop - 12);
         el.scrollTo({ top, behavior: "smooth" });
       } else {
@@ -88,9 +82,55 @@ export function Diary({ initialEntries }: DiaryProps) {
     }
   }
 
+  // Markup compartido del feed (se reusa en desktop/mobile con sus refs)
+  const renderFeedAndComposer = (
+    feedRef: React.RefObject<HTMLDivElement | null>,
+  ) => (
+    <>
+      <div
+        ref={feedRef}
+        className="feed-scroll diary-ruled absolute inset-x-0 top-0 overflow-y-auto px-8 pt-6"
+        style={{ bottom: "33%" }}
+      >
+        <div className="diary-feed-inner pb-6">
+          {entries.map((entry, i) => (
+            <div key={entry.id} data-entry-idx={i}>
+              <Entry entry={entry} onSuggestionClick={(s) => send(s)} />
+            </div>
+          ))}
+          {waiting && <TypingIndicator />}
+        </div>
+      </div>
+
+      {/* Banda divisora naranja entre conversación y composer */}
+      <div
+        className="absolute inset-x-6 h-[3px] rounded-full bg-[var(--color-accent)]"
+        style={{ bottom: "calc(33% + 18px)" }}
+      />
+
+      {/* Composer */}
+      <div
+        className="absolute inset-x-0 bottom-0 px-8 pb-6"
+        style={{ top: "67%" }}
+      >
+        <div className="flex h-full items-center">
+          <Composer
+            value={draft}
+            onChange={setDraft}
+            onSubmit={() => send(draft)}
+            disabled={waiting}
+            placeholder={
+              waiting ? "maluwa está escribiendo..." : "escribe aquí..."
+            }
+          />
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <div className="min-h-screen w-full">
-      {/* Header con logo flotando arriba a la izquierda — fuera del libro */}
+      {/* Header con logo flotando arriba a la izquierda */}
       <header className="flex items-center justify-between px-6 pt-5 md:px-10">
         <a href="/" aria-label="maluwa">
           <Image
@@ -107,146 +147,47 @@ export function Diary({ initialEntries }: DiaryProps) {
         </p>
       </header>
 
-      {/* DESKTOP: libreta abierta, centrada, con margen alrededor */}
+      {/* DESKTOP: libreta abierta tipo "tablet en cubierta de cuero" */}
       <div className="hidden px-6 pt-2 pb-10 md:block">
         <div
-          className="relative mx-auto w-full max-w-[1180px]"
-          style={{ aspectRatio: "16 / 10" }}
+          className="relative mx-auto flex w-full max-w-[1100px] overflow-hidden rounded-[20px] shadow-[0_20px_50px_rgba(0,0,0,0.18)]"
+          style={{ height: "min(78vh, 700px)" }}
         >
-          {/* La libreta como ilustración de fondo */}
-          <Image
-            src="/notebook/notebook-desktop.svg"
-            alt=""
-            fill
-            priority
-            sizes="(min-width: 1180px) 1180px, 100vw"
-            className="pointer-events-none select-none object-contain"
-            aria-hidden
-          />
+          {/* Cubierta izquierda — cuero marrón */}
+          <div className="relative flex-[1] bg-[#b08d6a] border-r border-black/10">
+            {/* Pequeño logo discreto en la esquina inferior */}
+            <span
+              aria-hidden
+              className="absolute bottom-7 left-7 text-2xl opacity-30 grayscale"
+            >
+              👌
+            </span>
+          </div>
 
-          {/* Página derecha — conversación */}
-          <div
-            className="absolute z-10"
-            style={{
-              left: "50%",
-              right: "9.03%",
-              top: "7.78%",
-              bottom: "7.78%",
-            }}
-          >
-            <div className="relative h-full w-full">
-              {/* Feed: arriba del divider naranja (~65%). Los renglones del cuaderno
-                  se dibujan con un repeating-linear-gradient atado al line-height
-                  del texto, así cualquier párrafo cae limpio sobre la línea. */}
-              <div
-                ref={feedRefDesktop}
-                className="feed-scroll diary-ruled absolute inset-x-0 top-0 overflow-y-auto"
-                style={{
-                  bottom: "37%",
-                  paddingLeft: "11%",
-                  paddingRight: "11%",
-                }}
-              >
-                <div className="diary-feed-inner pt-[36px] pb-6">
-                  {entries.map((entry, i) => (
-                    <div key={entry.id} data-entry-idx={i}>
-                      <Entry
-                        entry={entry}
-                        onSuggestionClick={(s) => send(s)}
-                      />
-                    </div>
-                  ))}
-                  {waiting && <TypingIndicator />}
-                </div>
-              </div>
-
-              {/* Composer: abajo del divider */}
-              <div
-                className="absolute inset-x-0 bottom-0"
-                style={{
-                  top: "67%",
-                  paddingLeft: "11%",
-                  paddingRight: "11%",
-                }}
-              >
-                <div className="flex h-full items-center">
-                  <Composer
-                    value={draft}
-                    onChange={setDraft}
-                    onSubmit={() => send(draft)}
-                    disabled={waiting}
-                    placeholder={
-                      waiting
-                        ? "maluwa está escribiendo..."
-                        : "escribe aquí..."
-                    }
-                  />
-                </div>
-              </div>
+          {/* Tablet derecha — marco gris claro */}
+          <div className="relative flex flex-[1.2] flex-col bg-[#f2f2f2] p-4">
+            {/* Pantalla blanca */}
+            <div className="relative flex-1 overflow-hidden rounded-[10px] bg-white shadow-[inset_0_0_5px_rgba(0,0,0,0.05)]">
+              {renderFeedAndComposer(feedRefDesktop)}
             </div>
+
+            {/* Stylus naranja sobresaliendo a la derecha */}
+            <div
+              aria-hidden
+              className="absolute top-[18%] -right-[6px] h-[42%] w-[14px] rounded-r-[5px] bg-[#e09d37] shadow-[2px_0_5px_rgba(0,0,0,0.1)]"
+            />
           </div>
         </div>
       </div>
 
-      {/* MOBILE: solo página suelta, también centrada con margen */}
-      <div className="md:hidden px-4 pt-2 pb-6">
+      {/* MOBILE: solo la "pantalla" tablet sin la cubierta de cuero */}
+      <div className="px-4 pt-2 pb-6 md:hidden">
         <div
-          className="relative mx-auto w-full max-w-md"
-          style={{ aspectRatio: "9 / 16" }}
+          className="relative mx-auto w-full max-w-md overflow-hidden rounded-[16px] bg-[#f2f2f2] p-3 shadow-[0_10px_30px_rgba(0,0,0,0.12)]"
+          style={{ height: "min(75vh, 720px)" }}
         >
-          <Image
-            src="/notebook/page-mobile.svg"
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            className="pointer-events-none select-none object-contain"
-            aria-hidden
-          />
-
-          <div className="absolute inset-0 z-10">
-            <div className="relative h-full w-full">
-              <div
-                ref={feedRefMobile}
-                className="feed-scroll diary-ruled absolute inset-x-0 top-0 overflow-y-auto"
-                style={{
-                  bottom: "32%",
-                  paddingLeft: "12%",
-                  paddingRight: "12%",
-                }}
-              >
-                <div className="diary-feed-inner pt-[40px] pb-4">
-                  {entries.map((entry, i) => (
-                    <div key={entry.id} data-entry-idx={i}>
-                      <Entry
-                        entry={entry}
-                        onSuggestionClick={(s) => send(s)}
-                      />
-                    </div>
-                  ))}
-                  {waiting && <TypingIndicator />}
-                </div>
-              </div>
-
-              <div
-                className="absolute inset-x-0 bottom-0 pb-6"
-                style={{
-                  top: "70%",
-                  paddingLeft: "12%",
-                  paddingRight: "12%",
-                }}
-              >
-                <Composer
-                  value={draft}
-                  onChange={setDraft}
-                  onSubmit={() => send(draft)}
-                  disabled={waiting}
-                  placeholder={
-                    waiting ? "maluwa está escribiendo..." : "escribe aquí..."
-                  }
-                />
-              </div>
-            </div>
+          <div className="relative h-full overflow-hidden rounded-[10px] bg-white shadow-[inset_0_0_5px_rgba(0,0,0,0.05)]">
+            {renderFeedAndComposer(feedRefMobile)}
           </div>
         </div>
       </div>

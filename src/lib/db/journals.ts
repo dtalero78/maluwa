@@ -1,0 +1,111 @@
+/**
+ * Operaciones de DB para `maluwa.journals` y `maluwa.ai_usage`.
+ *
+ * Diseño v0:
+ * - Las entradas del diario viven en una columna JSONB del journal. Es
+ *   simple y suficiente mientras el feed no pase de unos cientos de
+ *   elementos. Cuando crezca, se normaliza a una tabla aparte.
+ * - El acceso es por `anon_token` (cookie httpOnly del estudiante) o
+ *   por `user_id` cuando la cuenta exista.
+ */
+
+import { query } from "./index";
+import type { DiaryEntry } from "@/lib/diario/types";
+
+export interface JournalRow {
+  id: string;
+  anon_token: string;
+  user_id: string | null;
+  project_type: string;
+  title: string | null;
+  status: "draft" | "published" | "archived";
+  published_url: string | null;
+  entries_json: DiaryEntry[];
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Recupera o crea un journal para el `anon_token` dado. Si el chico ya
+ * tiene una conversación, la devuelve; si no, crea un draft nuevo.
+ */
+export async function getOrCreateJournalByAnonToken(
+  anonToken: string,
+  initialEntries: DiaryEntry[],
+): Promise<JournalRow> {
+  const existing = await query<JournalRow>(
+    `SELECT * FROM journals
+     WHERE anon_token = $1 AND status = 'draft'
+     ORDER BY updated_at DESC LIMIT 1`,
+    [anonToken],
+  );
+  if (existing.rows.length > 0) return existing.rows[0];
+
+  const created = await query<JournalRow>(
+    `INSERT INTO journals (anon_token, entries_json)
+     VALUES ($1, $2::jsonb)
+     RETURNING *`,
+    [anonToken, JSON.stringify(initialEntries)],
+  );
+  return created.rows[0];
+}
+
+export async function getJournalById(id: string): Promise<JournalRow | null> {
+  const r = await query<JournalRow>(`SELECT * FROM journals WHERE id = $1`, [
+    id,
+  ]);
+  return r.rows[0] ?? null;
+}
+
+export async function updateJournalEntries(
+  id: string,
+  entries: DiaryEntry[],
+): Promise<void> {
+  await query(
+    `UPDATE journals SET entries_json = $2::jsonb WHERE id = $1`,
+    [id, JSON.stringify(entries)],
+  );
+}
+
+/**
+ * Registra una llamada a Claude para auditar costo.
+ * Pricing aproximado de Claude Haiku 4.5 al 2026-04: $1/MTok input,
+ * $5/MTok output. Se calcula en cents para precisión.
+ */
+const HAIKU_INPUT_PER_MTOK_USD = 1;
+const HAIKU_OUTPUT_PER_MTOK_USD = 5;
+const HAIKU_CACHE_READ_PER_MTOK_USD = 0.1;
+const HAIKU_CACHE_WRITE_PER_MTOK_USD = 1.25;
+
+export interface AiUsageInsert {
+  journalId: string | null;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+}
+
+export async function recordAiUsage(u: AiUsageInsert): Promise<void> {
+  const cents =
+    100 *
+    ((u.inputTokens * HAIKU_INPUT_PER_MTOK_USD) / 1_000_000 +
+      (u.outputTokens * HAIKU_OUTPUT_PER_MTOK_USD) / 1_000_000 +
+      (u.cacheReadTokens * HAIKU_CACHE_READ_PER_MTOK_USD) / 1_000_000 +
+      (u.cacheWriteTokens * HAIKU_CACHE_WRITE_PER_MTOK_USD) / 1_000_000);
+  await query(
+    `INSERT INTO ai_usage
+       (journal_id, model, input_tokens, output_tokens,
+        cache_read_tokens, cache_write_tokens, cost_usd_cents)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [
+      u.journalId,
+      u.model,
+      u.inputTokens,
+      u.outputTokens,
+      u.cacheReadTokens,
+      u.cacheWriteTokens,
+      cents,
+    ],
+  );
+}

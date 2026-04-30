@@ -27,17 +27,12 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Renglones del cuaderno, muy tenues — solo dan ritmo visual sin imponerse. */
+/* Renglones del cuaderno tipo "tablet". Gris muy claro, atado al ritmo
+   de 36px del texto. */
 .diary-ruled {
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent 23px,
-    rgba(94, 71, 34, 0.1) 23px,
-    rgba(94, 71, 34, 0.1) 24px
-  );
+  background-image: linear-gradient(#e0e0e0 1px, transparent 1px);
   background-size: 100% 36px;
-  background-position: 0 0;
+  background-position: 0 23px;
   background-repeat: repeat;
 }
 

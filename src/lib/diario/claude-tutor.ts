@@ -285,11 +285,22 @@ function claudeEntryToDiaryEntry(c: ClaudeEntry): NewDiaryEntry | null {
   return null;
 }
 
+export interface ClaudeTurnResult {
+  newEntries: NewDiaryEntry[];
+  usage: {
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadTokens: number;
+    cacheWriteTokens: number;
+  };
+}
+
 export async function getNextTurnFromClaude({
   entries,
 }: {
   entries: DiaryEntry[];
-}): Promise<NewDiaryEntry[]> {
+}): Promise<ClaudeTurnResult> {
   const messages = entriesToMessages(entries);
 
   const response = await client.messages.create({
@@ -331,7 +342,16 @@ export async function getNextTurnFromClaude({
     });
   }
 
-  return parsed;
+  return {
+    newEntries: parsed,
+    usage: {
+      model: MODEL,
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
+      cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
+      cacheWriteTokens: response.usage.cache_creation_input_tokens ?? 0,
+    },
+  };
 }
 
 export function getOpeningEntries(): NewDiaryEntry[] {
