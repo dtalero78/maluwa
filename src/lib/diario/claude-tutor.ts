@@ -178,28 +178,71 @@ interface ClaudeEntry {
   css?: string;
 }
 
+type Block =
+  | { type: "text"; text: string }
+  | {
+      type: "image";
+      source: {
+        type: "url";
+        url: string;
+      };
+    };
+
 function entriesToMessages(
   entries: DiaryEntry[],
 ): Anthropic.MessageParam[] {
-  // Convertimos el feed en una alternancia user/assistant. La API exige
-  // alternancia, así que agrupamos entries del mismo "lado".
+  // Convertimos el feed en alternancia user/assistant. La API exige
+  // alternancia, así que agrupamos entries del mismo "lado". Cuando
+  // una respuesta del estudiante incluye imageUrl, añadimos un bloque
+  // image (Haiku 4.5 es multimodal).
   const out: Anthropic.MessageParam[] = [];
-  let buffer: { role: "user" | "assistant"; text: string[] } | null = null;
+  let buffer: { role: "user" | "assistant"; blocks: Block[] } | null = null;
 
   const flush = () => {
     if (!buffer) return;
-    out.push({ role: buffer.role, content: buffer.text.join("\n").trim() });
+    // Si solo hay un bloque text, mandamos como string para conservar
+    // la forma anterior. Si hay imágenes, mandamos array.
+    const onlyText =
+      buffer.blocks.length > 0 &&
+      buffer.blocks.every((b) => b.type === "text");
+    if (onlyText) {
+      const text = (buffer.blocks as { type: "text"; text: string }[])
+        .map((b) => b.text)
+        .join("\n")
+        .trim();
+      out.push({ role: buffer.role, content: text });
+    } else {
+      out.push({
+        role: buffer.role,
+        content: buffer.blocks as unknown as Anthropic.ContentBlockParam[],
+      });
+    }
     buffer = null;
   };
 
   for (const e of entries) {
     if (e.kind === "answer") {
+      const a = e as AnswerEntry;
       const role: "user" = "user";
-      const text = (e as AnswerEntry).text;
-      if (buffer && buffer.role === role) buffer.text.push(text);
+      const blocks: Block[] = [];
+      if (a.imageUrl) {
+        blocks.push({
+          type: "image",
+          source: { type: "url", url: a.imageUrl },
+        });
+      }
+      if (a.text.trim().length > 0) {
+        blocks.push({ type: "text", text: a.text });
+      } else if (a.imageUrl) {
+        blocks.push({
+          type: "text",
+          text: "(adjunto una foto del negocio)",
+        });
+      }
+      if (buffer && buffer.role === role) buffer.blocks.push(...blocks);
       else {
         flush();
-        buffer = { role, text: [text] };
+        buffer = { role, blocks };
       }
     } else {
       const role: "assistant" = "assistant";
@@ -214,17 +257,16 @@ function entriesToMessages(
         const s = e as SnapshotEntry;
         text = `[mostré snapshot: ${s.caption}]`;
       }
-      if (buffer && buffer.role === role) buffer.text.push(text);
+      const block: Block = { type: "text", text };
+      if (buffer && buffer.role === role) buffer.blocks.push(block);
       else {
         flush();
-        buffer = { role, text: [text] };
+        buffer = { role, blocks: [block] };
       }
     }
   }
   flush();
 
-  // La API exige que el último mensaje sea de role=user (para que el modelo
-  // responda). Si terminó en assistant, agregamos un placeholder.
   if (out.length === 0 || out[out.length - 1].role !== "user") {
     out.push({
       role: "user",

@@ -52,22 +52,10 @@ export function Diary({ initialEntries }: DiaryProps) {
     }
   }, [entries, waiting]);
 
-  async function send(answerText: string) {
-    const trimmed = answerText.trim();
-    if (!trimmed || waiting) return;
-
-    const answer: DiaryEntry = {
-      id: `local-${Date.now()}`,
-      kind: "answer",
-      role: "student",
-      text: trimmed,
-      createdAt: new Date().toISOString(),
-    };
+  async function pushAnswerAndAskNext(answer: DiaryEntry) {
     const nextEntries = [...entries, answer];
     setEntries(nextEntries);
-    setDraft("");
     setWaiting(true);
-
     try {
       const res = await fetch("/api/diario/turno", {
         method: "POST",
@@ -84,6 +72,32 @@ export function Diary({ initialEntries }: DiaryProps) {
     } finally {
       setWaiting(false);
     }
+  }
+
+  async function send(answerText: string) {
+    const trimmed = answerText.trim();
+    if (!trimmed || waiting) return;
+    setDraft("");
+    await pushAnswerAndAskNext({
+      id: `local-${Date.now()}`,
+      kind: "answer",
+      role: "student",
+      text: trimmed,
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  async function sendImage(url: string, mime: string) {
+    if (waiting) return;
+    await pushAnswerAndAskNext({
+      id: `local-${Date.now()}`,
+      kind: "answer",
+      role: "student",
+      text: "",
+      imageUrl: url,
+      imageMime: mime,
+      createdAt: new Date().toISOString(),
+    });
   }
 
   // Markup compartido del feed (se reusa en desktop/mobile con sus refs)
@@ -131,6 +145,7 @@ export function Diary({ initialEntries }: DiaryProps) {
             value={draft}
             onChange={setDraft}
             onSubmit={() => send(draft)}
+            onImageUploaded={({ url, mime }) => sendImage(url, mime)}
             disabled={waiting}
             placeholder={
               waiting ? "maluwa está escribiendo..." : "escribe aquí..."

@@ -29,6 +29,9 @@ export interface AnswerEntry extends BaseEntry {
   kind: "answer";
   role: "student";
   text: string;
+  /** URL pública de Spaces si la respuesta incluye una imagen subida. */
+  imageUrl?: string;
+  imageMime?: string;
 }
 
 export type ResourceCard =

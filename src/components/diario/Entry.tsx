@@ -63,43 +63,62 @@ export function Entry({ entry, onSuggestionClick }: EntryProps) {
 
   if (entry.kind === "answer") {
     const sticker = pickStickerStyle(entry.id);
+    const hasImage = Boolean(entry.imageUrl);
+    const hasText = entry.text.trim().length > 0;
     return (
       <div className="entry-in mb-[36px] flex justify-end">
         <div
-          className="sticker-answer relative flex max-w-[88%] items-center gap-3 overflow-hidden rounded-[18px] p-3 shadow-[0_4px_12px_rgba(0,0,0,0.12)]"
+          className="sticker-answer relative flex max-w-[88%] items-stretch gap-3 overflow-hidden rounded-[18px] p-3 shadow-[0_4px_12px_rgba(0,0,0,0.12)]"
           style={{
             backgroundColor: sticker.bg,
             transform: `rotate(${sticker.tiltDeg}deg)`,
           }}
         >
-          {/* Mancha decorativa de fondo (esquina superior izquierda) */}
           <span
             aria-hidden
             className="absolute -top-5 -left-5 h-20 w-20 rounded-full"
             style={{ background: "rgba(255,255,255,0.2)" }}
           />
-          {/* Ícono cuadrado blanco con emoji */}
           <span
             aria-hidden
             className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border-4 border-white bg-white text-3xl shadow-[3px_3px_0px_rgba(0,0,0,0.1)]"
           >
-            {sticker.icon}
+            {hasImage ? "📷" : sticker.icon}
           </span>
-          {/* Área blanca con texto sobre renglones discontinuos */}
-          <div
-            className="relative z-10 flex-1 rounded-xl bg-white px-3 py-2"
-            style={{
-              backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='36' viewBox='0 0 400 36' preserveAspectRatio='none'><line x1='0' y1='32' x2='400' y2='32' stroke='${encodeURIComponent(sticker.line)}' stroke-width='2' stroke-dasharray='7,6'/></svg>")`,
-              backgroundSize: "100% 36px",
-              backgroundRepeat: "repeat",
-            }}
-          >
-            <p
-              className="font-hand text-[26px] text-[var(--color-ink)]"
-              style={{ lineHeight: "36px" }}
-            >
-              {entry.text}
-            </p>
+          <div className="relative z-10 flex-1 overflow-hidden rounded-xl bg-white">
+            {hasImage && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={entry.imageUrl!}
+                alt="foto del estudiante"
+                className="block max-h-[260px] w-full object-cover"
+              />
+            )}
+            {hasText && (
+              <div
+                className="px-3 py-2"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='36' viewBox='0 0 400 36' preserveAspectRatio='none'><line x1='0' y1='32' x2='400' y2='32' stroke='${encodeURIComponent(sticker.line)}' stroke-width='2' stroke-dasharray='7,6'/></svg>")`,
+                  backgroundSize: "100% 36px",
+                  backgroundRepeat: "repeat",
+                }}
+              >
+                <p
+                  className="font-hand text-[26px] text-[var(--color-ink)]"
+                  style={{ lineHeight: "36px" }}
+                >
+                  {entry.text}
+                </p>
+              </div>
+            )}
+            {!hasText && hasImage && (
+              <p
+                className="font-hand px-3 py-1 text-right text-[18px] text-[var(--color-ink-soft)]"
+                style={{ lineHeight: "1.4" }}
+              >
+                (foto adjunta)
+              </p>
+            )}
           </div>
         </div>
       </div>
