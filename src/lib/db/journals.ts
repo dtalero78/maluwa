@@ -86,6 +86,20 @@ export interface AiUsageInsert {
   cacheWriteTokens: number;
 }
 
+/**
+ * Cuántos turnos (llamadas a Claude) ha consumido este journal en las
+ * últimas 24h. Sirve para enforzar el límite de 50 turnos/día/estudiante
+ * que protege el riesgo #1 del MARCO (costo de IA descontrolado).
+ */
+export async function countTurnsLast24h(journalId: string): Promise<number> {
+  const r = await query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count FROM ai_usage
+     WHERE journal_id = $1 AND created_at > now() - interval '24 hours'`,
+    [journalId],
+  );
+  return Number(r.rows[0]?.count ?? 0);
+}
+
 export async function recordAiUsage(u: AiUsageInsert): Promise<void> {
   const cents =
     100 *

@@ -2,15 +2,32 @@ import { NextResponse } from "next/server";
 import { getNextTurnFromClaude } from "@/lib/diario/claude-tutor";
 import { getNextTurn as getScriptedTurn } from "@/lib/diario/scripted-tutor";
 import {
+  countTurnsLast24h,
   getOrCreateJournalByAnonToken,
   recordAiUsage,
   updateJournalEntries,
 } from "@/lib/db/journals";
 import { getOrCreateAnonToken } from "@/lib/diario/session";
-import type { DiaryEntry } from "@/lib/diario/types";
+import type { DiaryEntry, NewDiaryEntry } from "@/lib/diario/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+// Tope diario por journal. Resuelve el riesgo #1 del MARCO (costo de IA
+// descontrolado). 50 turnos = ~$0.30/día/estudiante con Haiku 4.5 incl.
+// caching, o sea ~$10/mes/estudiante en el peor caso. Cuando un journal
+// llega al tope, dejamos de llamar a Claude y devolvemos un mensaje
+// amable hasta que la ventana de 24h se mueva.
+const TURNS_PER_24H_LIMIT = 50;
+
+const RATE_LIMIT_MESSAGE: NewDiaryEntry[] = [
+  {
+    kind: "question",
+    role: "ai",
+    text: "te leo, pero ya hablamos full por hoy 🙂 vuelve mañana y seguimos donde dejamos.",
+    hint: "el ratico se nos pasó volando — esto es para que no se nos vuele también la plata de la IA.",
+  },
+];
 
 export async function POST(req: Request) {
   const body = (await req.json()) as { entries?: DiaryEntry[] };
@@ -18,8 +35,8 @@ export async function POST(req: Request) {
 
   const { token: anonToken } = await getOrCreateAnonToken();
 
-  // Resolvemos el journal en DB asociado a esta sesión. Es best-effort:
-  // si DB falla por la razón que sea, la conversación sigue funcionando.
+  // Resolvemos el journal en DB asociado a esta sesión. Si la DB falla,
+  // la conversación sigue funcionando sin persistencia ni rate limit.
   let journalId: string | null = null;
   try {
     const journal = await getOrCreateJournalByAnonToken(
@@ -31,17 +48,33 @@ export async function POST(req: Request) {
     console.error("[diario] DB lookup failed:", err);
   }
 
+  // Rate limit: si excede el cupo, devolvemos el mensaje sin llamar a Claude.
+  if (journalId) {
+    try {
+      const turns = await countTurnsLast24h(journalId);
+      if (turns >= TURNS_PER_24H_LIMIT) {
+        const stamped = stampEntries(RATE_LIMIT_MESSAGE);
+        try {
+          await updateJournalEntries(journalId, [...clientEntries, ...stamped]);
+        } catch (err) {
+          console.error("[diario] rate-limit persist failed:", err);
+        }
+        return NextResponse.json({ entries: stamped, rateLimited: true });
+      }
+    } catch (err) {
+      console.error("[diario] rate-limit check failed:", err);
+    }
+  }
+
   // Llamada al tutor (Claude o script).
-  let newEntries;
-  let usage = null as
-    | null
-    | {
-        model: string;
-        inputTokens: number;
-        outputTokens: number;
-        cacheReadTokens: number;
-        cacheWriteTokens: number;
-      };
+  let newEntries: NewDiaryEntry[];
+  let usage: {
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadTokens: number;
+    cacheWriteTokens: number;
+  } | null = null;
 
   if (process.env.ANTHROPIC_API_KEY) {
     try {
@@ -56,27 +89,26 @@ export async function POST(req: Request) {
     newEntries = getScriptedTurn({ entries: clientEntries }).newEntries;
   }
 
-  const now = Date.now();
-  const stamped: DiaryEntry[] = newEntries.map((e, i) => ({
-    ...e,
-    id: `${now}-${i}`,
-    createdAt: new Date(now + i).toISOString(),
-  })) as DiaryEntry[];
+  const stamped = stampEntries(newEntries);
 
-  // Persistencia: guardamos el feed completo (entries antiguas del cliente
-  // + las nuevas de la IA). Si la cookie es nueva, esto crea un nuevo
-  // journal asociado al anon_token.
+  // Persistimos el feed completo + registramos costo. Best-effort.
   if (journalId) {
     try {
-      const fullFeed = [...clientEntries, ...stamped];
-      await updateJournalEntries(journalId, fullFeed);
-      if (usage) {
-        await recordAiUsage({ journalId, ...usage });
-      }
+      await updateJournalEntries(journalId, [...clientEntries, ...stamped]);
+      if (usage) await recordAiUsage({ journalId, ...usage });
     } catch (err) {
       console.error("[diario] DB persist failed:", err);
     }
   }
 
   return NextResponse.json({ entries: stamped });
+}
+
+function stampEntries(entries: NewDiaryEntry[]): DiaryEntry[] {
+  const now = Date.now();
+  return entries.map((e, i) => ({
+    ...e,
+    id: `${now}-${i}`,
+    createdAt: new Date(now + i).toISOString(),
+  })) as DiaryEntry[];
 }
