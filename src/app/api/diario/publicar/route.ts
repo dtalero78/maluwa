@@ -29,7 +29,9 @@ import {
   isSlugTaken,
   insertPublishedPage,
   claimJournalForUser,
+  recordNotification,
 } from "@/lib/db/users";
+import { notifyParent } from "@/lib/email/notify-parent";
 import type { DiaryEntry, SnapshotEntry } from "@/lib/diario/types";
 
 export const runtime = "nodejs";
@@ -127,11 +129,31 @@ export async function POST(req: Request) {
   // 7) Asociar journal al user, marcar publicado.
   await claimJournalForUser(journal.id, user.id, publishedUrl, title);
 
-  return NextResponse.json({
-    ok: true,
-    url: publishedUrl,
-    fullUrl: `https://maluwa.app${publishedUrl}`,
-  });
+  // 8) Avisar al padre/tutor (best-effort: si Resend falla, la publicación
+  //    no se rompe; solo logueamos en notifications). Es un compromiso
+  //    legal/ético pero no debe bloquear al estudiante.
+  const fullUrl = `https://maluwa.app${publishedUrl}`;
+  try {
+    const result = await notifyParent({
+      parentEmail: body.parent_email!,
+      studentName: body.name ?? null,
+      studentEmail: email,
+      publicUrl: fullUrl,
+    });
+    await recordNotification({
+      userId: user.id,
+      kind: "parent_publish_notice",
+      toEmail: body.parent_email!,
+      subject: result.subject,
+      ok: result.ok,
+      reason: result.reason,
+      providerId: result.providerId,
+    });
+  } catch (err) {
+    console.error("[publicar] notify+record threw:", err);
+  }
+
+  return NextResponse.json({ ok: true, url: publishedUrl, fullUrl });
 }
 
 function bad(message: string) {

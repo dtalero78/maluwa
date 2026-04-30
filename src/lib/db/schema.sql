@@ -93,6 +93,23 @@ CREATE INDEX IF NOT EXISTS idx_maluwa_published_user
   ON maluwa.published_pages (user_id);
 
 -- =====================================================================
+-- notifications: log de emails (avisos a padres y otros) que mandamos.
+-- Sirve para auditar "no recibí nada" y para no duplicar el aviso si la
+-- publicación se reintenta. provider_id es el ID que devuelve Resend.
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS maluwa.notifications (
+  id          bigserial   PRIMARY KEY,
+  user_id     uuid        REFERENCES maluwa.users(id) ON DELETE SET NULL,
+  kind        text        NOT NULL,
+  to_email    text        NOT NULL,
+  subject     text,
+  provider_id text,
+  ok          boolean     NOT NULL,
+  reason      text,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+-- =====================================================================
 -- Trigger para mantener updated_at fresco.
 -- =====================================================================
 CREATE OR REPLACE FUNCTION maluwa.touch_updated_at()

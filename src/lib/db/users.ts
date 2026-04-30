@@ -146,6 +146,30 @@ export async function getPublishedPageBySlug(slug: string): Promise<{
   return r.rows[0] ?? null;
 }
 
+export async function recordNotification(input: {
+  userId: string | null;
+  kind: string;
+  toEmail: string;
+  subject: string | null;
+  ok: boolean;
+  reason?: string | null;
+  providerId?: string | null;
+}): Promise<void> {
+  await query(
+    `INSERT INTO notifications (user_id, kind, to_email, subject, ok, reason, provider_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [
+      input.userId,
+      input.kind,
+      input.toEmail,
+      input.subject,
+      input.ok,
+      input.reason ?? null,
+      input.providerId ?? null,
+    ],
+  );
+}
+
 export async function isSlugTaken(slug: string): Promise<boolean> {
   const r = await query<{ id: string }>(
     `SELECT id FROM published_pages WHERE slug = $1 LIMIT 1`,
