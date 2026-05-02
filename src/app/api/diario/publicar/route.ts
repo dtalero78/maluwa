@@ -108,29 +108,38 @@ export async function POST(req: Request) {
   }
   const title = lastSnapshot.caption?.slice(0, 80) ?? null;
 
-  // FLUJO 2 — re-publicación.
+  // FLUJO 2 — re-publicación. La fuente de verdad es user_id (no
+  // journal_id) porque el journal asociado a la published_page puede
+  // haberse perdido en consolidaciones previas.
   if (journal.user_id) {
-    const updated = await updatePublishedPageByJournal({
-      journalId: journal.id,
-      title,
-      html: lastSnapshot.html,
-      css: lastSnapshot.css,
-    });
-    if (!updated) {
-      // Edge case: tiene user_id pero no encuentro published_page.
-      // Probablemente la borraron a mano. Caemos a flujo 1 NO es seguro
-      // (faltarían datos). Devolvemos error y log para investigar.
-      console.error(
-        `[publicar] journal ${journal.id} tiene user_id pero no published_page`,
+    const page = await getPublishedPageByUser(journal.user_id);
+    if (page) {
+      await updatePublishedPageById({
+        id: page.id,
+        title,
+        html: lastSnapshot.html,
+        css: lastSnapshot.css,
+      });
+      // Re-asociar el journal a la página por si estaba desincronizado.
+      await claimJournalForUser(
+        journal.id,
+        journal.user_id,
+        `/u/${page.slug}`,
+        title,
       );
-      return bad("hay un problema con tu cuenta, escríbenos a hola@maluwa.app");
+      return NextResponse.json({
+        ok: true,
+        url: `/u/${page.slug}`,
+        fullUrl: `https://maluwa.app/u/${page.slug}`,
+        reused: true,
+      });
     }
-    return NextResponse.json({
-      ok: true,
-      url: `/u/${updated.slug}`,
-      fullUrl: `https://maluwa.app/u/${updated.slug}`,
-      reused: true,
-    });
+    // Edge raro: user existe pero no tiene página. Caemos a flujo 1 con
+    // ese mismo user (debe enviar slug en el body). No hace falta crear
+    // user de nuevo — abajo el flujo "email existe + password" lo maneja.
+    console.warn(
+      `[publicar] journal ${journal.id} con user_id ${journal.user_id} pero sin página, pidiendo slug nuevo`,
+    );
   }
 
   // FLUJO 1 — primera publicación. Validar todo el formulario.

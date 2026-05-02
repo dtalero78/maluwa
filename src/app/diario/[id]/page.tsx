@@ -32,13 +32,21 @@ async function loadJournalState(): Promise<{
 
   if (anonToken) {
     try {
+      // JOIN con published_pages: la fuente de verdad del slug es
+      // user_id (no journal.published_url que puede estar desincronizado).
+      // Tomamos el journal con user_id si existe (publicado), sino el
+      // más reciente.
       const r = await query<{
         entries_json: DiaryEntry[];
-        published_url: string | null;
+        published_slug: string | null;
       }>(
-        `SELECT entries_json, published_url FROM journals
-         WHERE anon_token = $1
-         ORDER BY updated_at DESC LIMIT 1`,
+        `SELECT j.entries_json,
+                p.slug AS published_slug
+         FROM journals j
+         LEFT JOIN published_pages p ON p.user_id = j.user_id
+         WHERE j.anon_token = $1
+         ORDER BY (j.user_id IS NOT NULL) DESC, j.updated_at DESC
+         LIMIT 1`,
         [anonToken],
       );
       const row = r.rows[0];
@@ -46,7 +54,7 @@ async function loadJournalState(): Promise<{
       if (Array.isArray(persisted) && persisted.length > 0) {
         return {
           entries: persisted,
-          publishedUrl: row?.published_url ?? null,
+          publishedUrl: row?.published_slug ? `/u/${row.published_slug}` : null,
         };
       }
     } catch (err) {
