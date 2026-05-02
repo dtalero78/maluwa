@@ -33,10 +33,16 @@ export async function getOrCreateJournalByAnonToken(
   anonToken: string,
   initialEntries: DiaryEntry[],
 ): Promise<JournalRow> {
+  // Prioridad: si hay un journal con user_id (ya publicado), úsalo.
+  // Si no hay publicado, usa el draft más reciente. Sólo si no existe
+  // ninguno se crea uno nuevo. Antes filtrábamos sólo por status='draft',
+  // lo cual creaba un journal nuevo cada vez que el chico continuaba
+  // editando después de publicar — y duplicaba la cuenta.
   const existing = await query<JournalRow>(
     `SELECT * FROM journals
-     WHERE anon_token = $1 AND status = 'draft'
-     ORDER BY updated_at DESC LIMIT 1`,
+     WHERE anon_token = $1
+     ORDER BY (user_id IS NOT NULL) DESC, updated_at DESC
+     LIMIT 1`,
     [anonToken],
   );
   if (existing.rows.length > 0) return existing.rows[0];

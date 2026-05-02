@@ -67,16 +67,37 @@ export async function POST(req: Request) {
   const anonToken = (await cookies()).get("maluwa_session")?.value;
   if (!anonToken) return bad("no encontramos tu diario, recarga la página");
 
-  // Buscar el journal de este estudiante. Lo aceptamos en cualquier
-  // estado (draft o published) — si está published, sobreescribimos.
-  const journalRes = await query<JournalRow>(
-    `SELECT id, user_id, status, published_url, entries_json
+  // Buscar TODOS los journals del cookie (puede haber duplicados de
+  // sesiones que crearon nuevos journals tras publicar). Prioridad para
+  // el que tenga user_id (ya publicado); si hay drafts más recientes,
+  // sus entries son la fuente de verdad para el HTML.
+  const allRes = await query<JournalRow>(
+    `SELECT id, user_id, status, published_url, entries_json, updated_at
      FROM journals WHERE anon_token = $1
-     ORDER BY updated_at DESC LIMIT 1`,
+     ORDER BY updated_at DESC`,
     [anonToken],
   );
-  const journal = journalRes.rows[0];
-  if (!journal) return bad("no encontramos tu diario");
+  if (allRes.rows.length === 0) return bad("no encontramos tu diario");
+
+  // Journal "principal" = el claimado si existe, sino el más reciente.
+  const claimed = allRes.rows.find((r) => r.user_id);
+  const mostRecent = allRes.rows[0];
+  const journal: JournalRow = claimed
+    ? { ...claimed, entries_json: mostRecent.entries_json }
+    : mostRecent;
+
+  // Si hay journal claimado pero los entries más recientes están en otro
+  // journal, mergear hacia el claimado y limpiar los huérfanos.
+  if (claimed && claimed.id !== mostRecent.id) {
+    await query(
+      `UPDATE journals SET entries_json = $2 WHERE id = $1`,
+      [claimed.id, JSON.stringify(mostRecent.entries_json)],
+    );
+    await query(
+      `DELETE FROM journals WHERE anon_token = $1 AND id <> $2`,
+      [anonToken, claimed.id],
+    );
+  }
 
   // Snapshot a publicar = el último del feed.
   const lastSnapshot = [...journal.entries_json]
