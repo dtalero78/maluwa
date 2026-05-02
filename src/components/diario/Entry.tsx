@@ -149,9 +149,9 @@ export function Entry({ entry, onSuggestionClick }: EntryProps) {
         </p>
         <div className="mt-3 overflow-hidden rounded-2xl border border-[var(--color-line)] bg-white shadow-sm">
           <iframe
-            srcDoc={`<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>${entry.css}</style></head><body>${entry.html}</body></html>`}
-            sandbox=""
-            className="block h-[420px] w-full"
+            srcDoc={`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><script src="https://cdn.tailwindcss.com"></script><style>${entry.css}</style></head><body>${entry.html}</body></html>`}
+            sandbox="allow-scripts"
+            className="block h-[480px] w-full"
             title="Vista previa del proyecto"
           />
         </div>

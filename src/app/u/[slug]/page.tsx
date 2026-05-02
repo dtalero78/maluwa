@@ -38,6 +38,7 @@ export default async function PublishedPage({ params }: PageProps) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>${escapeStyleTag(page.css)}</style>
 </head>
 <body>${page.html}</body>
@@ -47,7 +48,7 @@ export default async function PublishedPage({ params }: PageProps) {
     <main className="min-h-screen w-full">
       <iframe
         srcDoc={doc}
-        sandbox=""
+        sandbox="allow-scripts"
         className="block min-h-screen w-full border-0"
         title={page.title ?? slug}
       />
