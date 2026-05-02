@@ -191,7 +191,7 @@ export function PublishModal({ open, onClose }: PublishModalProps) {
               <input
                 type="text"
                 required
-                pattern="[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?"
+                pattern="[a-z0-9]([a-z0-9\-]{1,38}[a-z0-9])?"
                 value={state.slug}
                 onChange={(e) =>
                   update("slug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
