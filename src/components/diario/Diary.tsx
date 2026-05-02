@@ -27,11 +27,17 @@ export function Diary({ initialEntries, publishedUrl }: DiaryProps) {
   // efecto en el visible.
   const feedRefDesktop = useRef<HTMLDivElement>(null);
   const feedRefMobile = useRef<HTMLDivElement>(null);
+  const isFirstRender = useRef(true);
 
-  // Scroll: cuando la IA agrega una respuesta nueva, llevamos al usuario al
-  // INICIO de esa respuesta (no al fondo del feed). useLayoutEffect garantiza
-  // que scrollHeight ya refleja el DOM nuevo antes del paint.
+  // Scroll: cuando la IA agrega una respuesta nueva, llevamos al usuario
+  // al INICIO de esa respuesta. En el primer render usamos scrollTop
+  // síncrono (sin smooth) porque en mobile la animación smooth hace que
+  // el browser "siga" la animación scrolleando el body — y la página
+  // aparece anclada en el composer abajo en lugar del logo arriba.
   useLayoutEffect(() => {
+    const wasFirst = isFirstRender.current;
+    isFirstRender.current = false;
+
     let firstNewAiIndex = -1;
     for (let i = entries.length - 1; i >= 0; i--) {
       if (entries[i].kind === "answer") break;
@@ -39,19 +45,24 @@ export function Diary({ initialEntries, publishedUrl }: DiaryProps) {
     }
     for (const el of [feedRefDesktop.current, feedRefMobile.current]) {
       if (!el) continue;
-      if (firstNewAiIndex === -1) {
-        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-        continue;
+      let top = el.scrollHeight;
+      if (firstNewAiIndex !== -1) {
+        const target = el.querySelector<HTMLElement>(
+          `[data-entry-idx="${firstNewAiIndex}"]`,
+        );
+        if (target) top = Math.max(0, target.offsetTop - 12);
       }
-      const target = el.querySelector<HTMLElement>(
-        `[data-entry-idx="${firstNewAiIndex}"]`,
-      );
-      if (target) {
-        const top = Math.max(0, target.offsetTop - 12);
-        el.scrollTo({ top, behavior: "smooth" });
+      if (wasFirst) {
+        el.scrollTop = top;
       } else {
-        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+        el.scrollTo({ top, behavior: "smooth" });
       }
+    }
+
+    // En mobile, además, garantizamos que el scroll del documento esté
+    // arriba: si el browser intentó compensar al montar, lo regresamos.
+    if (wasFirst && typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
     }
   }, [entries, waiting]);
 
