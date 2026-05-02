@@ -1,21 +1,18 @@
 /**
  * POST /api/diario/publicar
  *
- * Publica el journal del estudiante: crea cuenta + asocia journal +
- * guarda HTML/CSS final en `published_pages`. Devuelve la URL.
+ * Dos flujos:
  *
- * Body esperado:
- * {
- *   email: string,
- *   password: string (min 6),
- *   slug: string ("panaderia-de-mi-mama"),
- *   age: number,
- *   parent_email: string,
- *   accepted_terms: true,
- *   name?: string,
- *   city?: string,
- *   school?: string
- * }
+ * 1. PRIMERA publicación (journal todavía no tiene user_id):
+ *    - Body con email, password, slug, edad, parent_email, accepted_terms.
+ *    - Crea cuenta + claima journal + inserta published_page + avisa al
+ *      padre por email.
+ *
+ * 2. RE-publicación (journal ya tiene user_id):
+ *    - Body puede ir vacío. La cookie identifica al estudiante.
+ *    - Sobreescribe el HTML/CSS/title de la página existente con el
+ *      último snapshot. Mantiene el mismo slug. NO se manda email
+ *      otra vez (el padre ya fue avisado).
  *
  * Auth: la cookie `maluwa_session` identifica el journal del chico.
  */
@@ -30,6 +27,7 @@ import {
   insertPublishedPage,
   claimJournalForUser,
   recordNotification,
+  updatePublishedPageByJournal,
 } from "@/lib/db/users";
 import { notifyParent } from "@/lib/email/notify-parent";
 import type { DiaryEntry, SnapshotEntry } from "@/lib/diario/types";
@@ -52,10 +50,66 @@ interface PublishBody {
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export async function POST(req: Request) {
-  const body = (await req.json().catch(() => null)) as PublishBody | null;
-  if (!body) return bad("body invalido");
+interface JournalRow {
+  id: string;
+  user_id: string | null;
+  status: string;
+  published_url: string | null;
+  entries_json: DiaryEntry[];
+}
 
+export async function POST(req: Request) {
+  const body = (await req.json().catch(() => ({}))) as PublishBody;
+
+  const anonToken = (await cookies()).get("maluwa_session")?.value;
+  if (!anonToken) return bad("no encontramos tu diario, recarga la página");
+
+  // Buscar el journal de este estudiante. Lo aceptamos en cualquier
+  // estado (draft o published) — si está published, sobreescribimos.
+  const journalRes = await query<JournalRow>(
+    `SELECT id, user_id, status, published_url, entries_json
+     FROM journals WHERE anon_token = $1
+     ORDER BY updated_at DESC LIMIT 1`,
+    [anonToken],
+  );
+  const journal = journalRes.rows[0];
+  if (!journal) return bad("no encontramos tu diario");
+
+  // Snapshot a publicar = el último del feed.
+  const lastSnapshot = [...journal.entries_json]
+    .reverse()
+    .find((e): e is SnapshotEntry => e.kind === "snapshot");
+  if (!lastSnapshot) {
+    return bad("aún no tienes una página construida; conversa un poco más");
+  }
+  const title = lastSnapshot.caption?.slice(0, 80) ?? null;
+
+  // FLUJO 2 — re-publicación.
+  if (journal.user_id) {
+    const updated = await updatePublishedPageByJournal({
+      journalId: journal.id,
+      title,
+      html: lastSnapshot.html,
+      css: lastSnapshot.css,
+    });
+    if (!updated) {
+      // Edge case: tiene user_id pero no encuentro published_page.
+      // Probablemente la borraron a mano. Caemos a flujo 1 NO es seguro
+      // (faltarían datos). Devolvemos error y log para investigar.
+      console.error(
+        `[publicar] journal ${journal.id} tiene user_id pero no published_page`,
+      );
+      return bad("hay un problema con tu cuenta, escríbenos a hola@maluwa.app");
+    }
+    return NextResponse.json({
+      ok: true,
+      url: `/u/${updated.slug}`,
+      fullUrl: `https://maluwa.app/u/${updated.slug}`,
+      reused: true,
+    });
+  }
+
+  // FLUJO 1 — primera publicación. Validar todo el formulario.
   const errors: string[] = [];
   if (!body.email || !EMAIL_RE.test(body.email)) errors.push("email invalido");
   if (!body.password || body.password.length < 6)
@@ -66,44 +120,16 @@ export async function POST(req: Request) {
     errors.push("email del padre/tutor invalido");
   if (typeof body.age !== "number" || body.age < 8 || body.age > 25)
     errors.push("edad fuera de rango");
-  if (body.accepted_terms !== true)
-    errors.push("debes aceptar los términos");
+  if (body.accepted_terms !== true) errors.push("debes aceptar los términos");
   if (errors.length) return bad(errors.join(", "));
 
-  const email = body.email!;
+  const email = body.email!.toLowerCase().trim();
   const slug = body.slug!;
 
-  // 1) Slug debe estar libre.
-  if (await isSlugTaken(slug)) {
+  if (await isSlugTaken(slug))
     return bad(`el slug "${slug}" ya está tomado, prueba otro`);
-  }
-  // 2) Email no debe existir aún (en v0 no permitimos publicar a una cuenta existente).
-  if (await getUserByEmail(email)) {
-    return bad("ese email ya tiene cuenta");
-  }
+  if (await getUserByEmail(email)) return bad("ese email ya tiene cuenta");
 
-  // 3) Encontrar el journal del estudiante por su cookie.
-  const anonToken = (await cookies()).get("maluwa_session")?.value;
-  if (!anonToken) return bad("no encontramos tu diario, recarga la página");
-
-  const journalRes = await query<{ id: string; entries_json: DiaryEntry[] }>(
-    `SELECT id, entries_json FROM journals
-     WHERE anon_token = $1 AND status = 'draft'
-     ORDER BY updated_at DESC LIMIT 1`,
-    [anonToken],
-  );
-  const journal = journalRes.rows[0];
-  if (!journal) return bad("no encontramos tu diario en draft");
-
-  // 4) Sacar el último snapshot del feed (es lo que se publicará).
-  const lastSnapshot = [...journal.entries_json]
-    .reverse()
-    .find((e): e is SnapshotEntry => e.kind === "snapshot");
-  if (!lastSnapshot) {
-    return bad("aún no tienes una página construida; conversa un poco más");
-  }
-
-  // 5) Crear user.
   const user = await createUser({
     email,
     password: body.password!,
@@ -114,9 +140,7 @@ export async function POST(req: Request) {
     parentEmail: body.parent_email,
   });
 
-  // 6) Insertar published_page.
   const publishedUrl = `/u/${slug}`;
-  const title = lastSnapshot.caption?.slice(0, 80) ?? null;
   await insertPublishedPage({
     slug,
     journalId: journal.id,
@@ -125,13 +149,9 @@ export async function POST(req: Request) {
     html: lastSnapshot.html,
     css: lastSnapshot.css,
   });
-
-  // 7) Asociar journal al user, marcar publicado.
   await claimJournalForUser(journal.id, user.id, publishedUrl, title);
 
-  // 8) Avisar al padre/tutor (best-effort: si Resend falla, la publicación
-  //    no se rompe; solo logueamos en notifications). Es un compromiso
-  //    legal/ético pero no debe bloquear al estudiante.
+  // Aviso al padre — best-effort.
   const fullUrl = `https://maluwa.app${publishedUrl}`;
   try {
     const result = await notifyParent({

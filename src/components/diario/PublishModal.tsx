@@ -5,6 +5,9 @@ import { useEffect, useState } from "react";
 interface PublishModalProps {
   open: boolean;
   onClose: () => void;
+  /** Si ya hay página publicada, mostramos UI de "actualizar" sin
+      pedir formulario otra vez (la cookie ya identifica al chico). */
+  alreadyPublishedUrl?: string | null;
 }
 
 interface PublishOk {
@@ -18,7 +21,11 @@ interface PublishErr {
 }
 type PublishResp = PublishOk | PublishErr;
 
-export function PublishModal({ open, onClose }: PublishModalProps) {
+export function PublishModal({
+  open,
+  onClose,
+  alreadyPublishedUrl,
+}: PublishModalProps) {
   const [state, setState] = useState<{
     email: string;
     password: string;
@@ -53,6 +60,25 @@ export function PublishModal({ open, onClose }: PublishModalProps) {
     k: K,
     v: (typeof state)[K],
   ) => setState((s) => ({ ...s, [k]: v }));
+
+  async function republish() {
+    setErrorMsg(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/diario/publicar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const data = (await res.json()) as PublishResp;
+      if (data.ok) setSuccess(data);
+      else setErrorMsg(data.error);
+    } catch {
+      setErrorMsg("falló la conexión, intenta de nuevo");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -122,6 +148,40 @@ export function PublishModal({ open, onClose }: PublishModalProps) {
                 copiar link
               </button>
             </div>
+          </div>
+        ) : alreadyPublishedUrl ? (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-2xl font-semibold">actualizar tu página</h2>
+              <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+                tu página ya existe en{" "}
+                <a
+                  href={alreadyPublishedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-2"
+                >
+                  maluwa.app{alreadyPublishedUrl}
+                </a>
+                . al actualizar, la página queda con los últimos cambios que
+                construiste con maluwa. el link no cambia.
+              </p>
+            </div>
+
+            {errorMsg && (
+              <p className="rounded-lg bg-red-100 px-3 py-2 text-sm text-red-800">
+                {errorMsg}
+              </p>
+            )}
+
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={republish}
+              className="w-full rounded-full bg-[var(--color-accent)] px-5 py-3 text-sm font-medium text-white transition hover:bg-[var(--color-accent-deep)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {submitting ? "actualizando..." : "actualizar mi página"}
+            </button>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-4">

@@ -70,6 +70,11 @@ REGLAS DEL SNAPSHOT
 - Tipografía system-ui, no fonts externas.
 - Incluir SIEMPRE un botón "WhatsApp" si tienes el teléfono.
 
+IMÁGENES SUBIDAS POR EL ESTUDIANTE
+Cuando el estudiante adjunte una foto, te llega como un bloque \`image\` Y como texto del estilo:
+  [foto_subida: https://maluwa-uploads.nyc3.digitaloceanspaces.com/journals/.../xxxxx.jpg]
+Cuando generes el HTML del snapshot, **debes usar EXACTAMENTE esa URL** en \`<img src="..."\`> para que la foto aparezca en la página publicada. No inventes URLs, no uses placeholders como "foto.jpg" ni texto que diga "foto del pan". Las URLs son reales y públicas. Si recibiste varias fotos, úsalas todas en el orden adecuado.
+
 FORMATO DEL HTML EN SNAPSHOTS
 - No incluyas \`<html>\`, \`<head>\`, \`<body>\` — solo el contenido del body. La UI los envuelve.
 - Sin scripts.
@@ -231,13 +236,21 @@ function entriesToMessages(
           source: { type: "url", url: a.imageUrl },
         });
       }
+      // Construimos un texto que incluya la URL literal de la foto. Eso
+      // sirve para dos cosas: (1) Claude la puede transcribir tal cual al
+      // <img src> del snapshot HTML, y (2) queda anclada en el contexto
+      // de la conversación si más adelante quiere referenciarla.
+      const textParts: string[] = [];
+      if (a.imageUrl) {
+        textParts.push(`[foto_subida: ${a.imageUrl}]`);
+      }
       if (a.text.trim().length > 0) {
-        blocks.push({ type: "text", text: a.text });
+        textParts.push(a.text);
       } else if (a.imageUrl) {
-        blocks.push({
-          type: "text",
-          text: "(adjunto una foto del negocio)",
-        });
+        textParts.push("(adjunto una foto del negocio)");
+      }
+      if (textParts.length > 0) {
+        blocks.push({ type: "text", text: textParts.join("\n") });
       }
       if (buffer && buffer.role === role) buffer.blocks.push(...blocks);
       else {

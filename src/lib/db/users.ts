@@ -129,6 +129,27 @@ export async function insertPublishedPage(input: {
   return r.rows[0];
 }
 
+/**
+ * Sobreescribe el HTML/CSS/title de una página publicada existente.
+ * Útil cuando el estudiante "republica" tras editar — mantenemos el
+ * mismo slug para que su mamá no pierda el link.
+ */
+export async function updatePublishedPageByJournal(input: {
+  journalId: string;
+  title: string | null;
+  html: string;
+  css: string;
+}): Promise<{ slug: string } | null> {
+  const r = await query<{ slug: string }>(
+    `UPDATE published_pages
+     SET html = $2, css = $3, title = $4
+     WHERE journal_id = $1
+     RETURNING slug`,
+    [input.journalId, input.html, input.css, input.title],
+  );
+  return r.rows[0] ?? null;
+}
+
 export async function getPublishedPageBySlug(slug: string): Promise<{
   slug: string;
   title: string | null;

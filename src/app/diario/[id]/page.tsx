@@ -14,38 +14,47 @@ export default async function DiaryPage({
 }) {
   await params; // En v0 todos los diarios resuelven al journal del session token.
 
-  const initial = await loadInitialEntries();
-  return <Diary initialEntries={initial} />;
+  const { entries, publishedUrl } = await loadJournalState();
+  return <Diary initialEntries={entries} publishedUrl={publishedUrl} />;
 }
 
 /**
- * Hidrata la conversación del estudiante desde Postgres si tiene cookie de
- * sesión con un journal existente. Si no, devuelve la apertura.
- *
- * El primer POST a /api/diario/turno se encarga de setear la cookie y
- * crear la fila en DB; este server component solo LEE.
+ * Hidrata la conversación del estudiante desde Postgres si tiene cookie
+ * de sesión con un journal existente. También devuelve published_url si
+ * el journal ya está claimado, para que la UI sepa que el botón
+ * "publicar" debe convertirse en "actualizar mi página".
  */
-async function loadInitialEntries(): Promise<DiaryEntry[]> {
+async function loadJournalState(): Promise<{
+  entries: DiaryEntry[];
+  publishedUrl: string | null;
+}> {
   const anonToken = (await cookies()).get("maluwa_session")?.value;
 
   if (anonToken) {
     try {
-      const r = await query<{ entries_json: DiaryEntry[] }>(
-        `SELECT entries_json FROM journals
-         WHERE anon_token = $1 AND status = 'draft'
+      const r = await query<{
+        entries_json: DiaryEntry[];
+        published_url: string | null;
+      }>(
+        `SELECT entries_json, published_url FROM journals
+         WHERE anon_token = $1
          ORDER BY updated_at DESC LIMIT 1`,
         [anonToken],
       );
-      const persisted = r.rows[0]?.entries_json;
+      const row = r.rows[0];
+      const persisted = row?.entries_json;
       if (Array.isArray(persisted) && persisted.length > 0) {
-        return persisted;
+        return {
+          entries: persisted,
+          publishedUrl: row?.published_url ?? null,
+        };
       }
     } catch (err) {
       console.error("[diario page] hydration failed, falling back:", err);
     }
   }
 
-  return stampOpening();
+  return { entries: stampOpening(), publishedUrl: null };
 }
 
 function stampOpening(): DiaryEntry[] {

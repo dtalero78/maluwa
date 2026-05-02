@@ -9,13 +9,16 @@ import { PublishModal } from "./PublishModal";
 
 interface DiaryProps {
   initialEntries: DiaryEntry[];
+  /** Si el journal ya está publicado, su URL relativa (/u/<slug>). */
+  publishedUrl?: string | null;
 }
 
-export function Diary({ initialEntries }: DiaryProps) {
+export function Diary({ initialEntries, publishedUrl }: DiaryProps) {
   const [entries, setEntries] = useState<DiaryEntry[]>(initialEntries);
   const [draft, setDraft] = useState("");
   const [waiting, setWaiting] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
+  const alreadyPublished = Boolean(publishedUrl);
 
   const hasSnapshot = entries.some((e) => e.kind === "snapshot");
   // Dos refs porque renderizamos dos contenedores (desktop / mobile) — usar
@@ -138,7 +141,7 @@ export function Diary({ initialEntries }: DiaryProps) {
               onClick={() => setPublishOpen(true)}
               className="self-end rounded-full bg-[var(--color-accent)] px-4 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-[var(--color-accent-deep)]"
             >
-              publicar mi página →
+              {alreadyPublished ? "actualizar mi página →" : "publicar mi página →"}
             </button>
           )}
           <Composer
@@ -209,7 +212,11 @@ export function Diary({ initialEntries }: DiaryProps) {
       </div>
 
       {/* Modal de publicar */}
-      <PublishModal open={publishOpen} onClose={() => setPublishOpen(false)} />
+      <PublishModal
+        open={publishOpen}
+        onClose={() => setPublishOpen(false)}
+        alreadyPublishedUrl={publishedUrl ?? null}
+      />
 
       {/* MOBILE: solo la "pantalla" tablet sin la cubierta de cuero */}
       <div className="px-4 pt-2 pb-6 md:hidden">
