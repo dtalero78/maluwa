@@ -110,10 +110,10 @@ export function Diary({ initialEntries, publishedUrl }: DiaryProps) {
     <>
       <div
         ref={feedRef}
-        className="feed-scroll diary-ruled absolute inset-x-0 top-0 overflow-y-auto px-8 pt-6"
-        style={{ bottom: "33%" }}
+        className="feed-scroll diary-ruled absolute inset-x-0 top-0 overflow-y-auto px-8 pt-6 pb-4"
+        style={{ bottom: "20%" }}
       >
-        <div className="diary-feed-inner pb-6">
+        <div className="diary-feed-inner">
           {entries.map((entry, i) => (
             <div key={entry.id} data-entry-idx={i}>
               <Entry entry={entry} onSuggestionClick={(s) => send(s)} />
@@ -123,18 +123,12 @@ export function Diary({ initialEntries, publishedUrl }: DiaryProps) {
         </div>
       </div>
 
-      {/* Banda divisora naranja entre conversación y composer */}
-      <div
-        className="absolute inset-x-6 h-[3px] rounded-full bg-[var(--color-accent)]"
-        style={{ bottom: "calc(33% + 18px)" }}
-      />
-
       {/* Composer + (opcional) botón "publicar" */}
       <div
-        className="absolute inset-x-0 bottom-0 px-8 pb-6"
-        style={{ top: "67%" }}
+        className="absolute inset-x-0 bottom-0 px-8 pb-4"
+        style={{ top: "80%" }}
       >
-        <div className="flex h-full flex-col justify-center gap-2">
+        <div className="flex h-full flex-col justify-end gap-2">
           {hasSnapshot && (
             <button
               type="button"
