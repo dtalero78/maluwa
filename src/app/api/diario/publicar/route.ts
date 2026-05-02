@@ -28,6 +28,9 @@ import {
   claimJournalForUser,
   recordNotification,
   updatePublishedPageByJournal,
+  verifyPassword,
+  getPublishedPageByUser,
+  updatePublishedPageById,
 } from "@/lib/db/users";
 import { notifyParent } from "@/lib/email/notify-parent";
 import type { DiaryEntry, SnapshotEntry } from "@/lib/diario/types";
@@ -126,9 +129,63 @@ export async function POST(req: Request) {
   const email = body.email!.toLowerCase().trim();
   const slug = body.slug!;
 
+  // Caso A: email ya tiene cuenta — autenticamos y reusamos su página
+  // (manteniendo el slug original). Esto pasa si el chico borró cookies,
+  // o si su journal anterior se quedó sin claimar por algún error.
+  const existing = await getUserByEmail(email);
+  if (existing) {
+    const verified = await verifyPassword(email, body.password!);
+    if (!verified) {
+      return bad(
+        "ese email ya tiene cuenta. el password no coincide — prueba con la contraseña que pusiste la primera vez.",
+      );
+    }
+    const page = await getPublishedPageByUser(verified.id);
+    if (page) {
+      // Reusamos slug existente y sobreescribimos.
+      await updatePublishedPageById({
+        id: page.id,
+        title,
+        html: lastSnapshot.html,
+        css: lastSnapshot.css,
+      });
+      await claimJournalForUser(
+        journal.id,
+        verified.id,
+        `/u/${page.slug}`,
+        title,
+      );
+      return NextResponse.json({
+        ok: true,
+        url: `/u/${page.slug}`,
+        fullUrl: `https://maluwa.app/u/${page.slug}`,
+        reused: true,
+      });
+    }
+    // Edge: user existe pero nunca publicó. Tratar como primera publicación
+    // bajo esta cuenta — slug debe estar libre.
+    if (await isSlugTaken(slug))
+      return bad(`el slug "${slug}" ya está tomado, prueba otro`);
+    const publishedUrl = `/u/${slug}`;
+    await insertPublishedPage({
+      slug,
+      journalId: journal.id,
+      userId: verified.id,
+      title,
+      html: lastSnapshot.html,
+      css: lastSnapshot.css,
+    });
+    await claimJournalForUser(journal.id, verified.id, publishedUrl, title);
+    return NextResponse.json({
+      ok: true,
+      url: publishedUrl,
+      fullUrl: `https://maluwa.app${publishedUrl}`,
+    });
+  }
+
+  // Caso B: email nuevo — flujo normal de "primera vez".
   if (await isSlugTaken(slug))
     return bad(`el slug "${slug}" ya está tomado, prueba otro`);
-  if (await getUserByEmail(email)) return bad("ese email ya tiene cuenta");
 
   const user = await createUser({
     email,

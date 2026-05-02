@@ -191,6 +191,34 @@ export async function recordNotification(input: {
   );
 }
 
+/** Página publicada del user (asumiendo a lo más una en v0). */
+export async function getPublishedPageByUser(userId: string): Promise<{
+  id: string;
+  slug: string;
+} | null> {
+  const r = await query<{ id: string; slug: string }>(
+    `SELECT id, slug FROM published_pages
+     WHERE user_id = $1
+     ORDER BY created_at DESC LIMIT 1`,
+    [userId],
+  );
+  return r.rows[0] ?? null;
+}
+
+/** Sobreescribe HTML/CSS/title de una published_page por su id (slug
+    permanece). */
+export async function updatePublishedPageById(input: {
+  id: string;
+  title: string | null;
+  html: string;
+  css: string;
+}): Promise<void> {
+  await query(
+    `UPDATE published_pages SET html = $2, css = $3, title = $4 WHERE id = $1`,
+    [input.id, input.html, input.css, input.title],
+  );
+}
+
 export async function isSlugTaken(slug: string): Promise<boolean> {
   const r = await query<{ id: string }>(
     `SELECT id FROM published_pages WHERE slug = $1 LIMIT 1`,
