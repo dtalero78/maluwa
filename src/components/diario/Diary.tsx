@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { DiaryEntry } from "@/lib/diario/types";
 import { Entry, TypingIndicator } from "./Entry";
@@ -168,7 +169,7 @@ export function Diary({ initialEntries, publishedUrl }: DiaryProps) {
     <div className="min-h-screen w-full">
       {/* Header con logo flotando arriba a la izquierda */}
       <header className="flex items-center justify-between px-6 pt-5 md:px-10">
-        <a href="/" aria-label="maluwa">
+        <Link href="/" aria-label="maluwa">
           <Image
             src="/logo-v2.png"
             alt="maluwa"
@@ -177,7 +178,7 @@ export function Diary({ initialEntries, publishedUrl }: DiaryProps) {
             priority
             className="h-12 w-auto md:h-14"
           />
-        </a>
+        </Link>
         <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-ink-soft)]">
           tu diario
         </p>

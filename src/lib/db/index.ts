@@ -14,7 +14,6 @@ import { Pool, type QueryResult, type QueryResultRow } from "pg";
 declare global {
   // En dev, Next/Turbopack recompila y crea múltiples instancias del
   // módulo. Cacheamos el pool en globalThis para evitar agotar conexiones.
-  // eslint-disable-next-line no-var
   var __maluwa_pg_pool: Pool | undefined;
 }
 
