@@ -5,6 +5,7 @@ import {
   Bricolage_Grotesque,
   Space_Grotesk,
   JetBrains_Mono,
+  Source_Serif_4,
 } from "next/font/google";
 import "./globals.css";
 
@@ -38,6 +39,15 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+// Serif editorial del diario (run #7). Pesos 380/520 caen en 400/500 estándar.
+const sourceSerif = Source_Serif_4({
+  subsets: ["latin"],
+  variable: "--font-serif-editorial",
+  display: "swap",
+  weight: ["300", "400", "500", "600"],
+  style: ["normal", "italic"],
+});
+
 export const metadata: Metadata = {
   title: "Maluwa — construye lo que se te ocurra, con IA",
   description:
@@ -58,7 +68,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${caveat.variable} ${lora.variable} ${bricolage.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
+      className={`${caveat.variable} ${lora.variable} ${bricolage.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} ${sourceSerif.variable}`}
     >
       <body className="min-h-screen">{children}</body>
     </html>

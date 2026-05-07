@@ -30,7 +30,7 @@ export function Composer({
     const el = taRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 220)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   }, [value]);
 
   async function handleFile(file: File) {
@@ -59,10 +59,17 @@ export function Composer({
     }
   }
 
+  const sendDisabled = disabled || value.trim().length === 0;
+
   return (
-    <div className="w-full">
-      <div className="flex w-full items-end gap-2 rounded-2xl bg-[var(--color-paper)]/90 px-3 py-3 shadow-sm ring-1 ring-[var(--color-line)] backdrop-blur-sm focus-within:ring-[var(--color-accent)]">
-        {/* Input de archivo oculto */}
+    <>
+      <form
+        className="diary-composer"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!sendDisabled) onSubmit();
+        }}
+      >
         <input
           ref={fileRef}
           type="file"
@@ -74,42 +81,45 @@ export function Composer({
           }}
         />
 
-        {/* Botón 📷 para subir imagen */}
+        {/* Paperclip / upload — outline 18px, ink-soft */}
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={disabled || uploading}
-          aria-label="subir foto"
-          title="subir foto"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--color-ink-soft)] transition hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="adjuntar foto"
+          title="adjuntar foto"
+          className="clip"
         >
           {uploading ? (
             <svg
-              className="animate-spin"
               width="18"
               height="18"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2.4"
+              strokeWidth="1.6"
               strokeLinecap="round"
               strokeLinejoin="round"
+              className="animate-spin"
+              aria-hidden="true"
             >
               <path d="M21 12a9 9 0 1 1-6.2-8.5" />
             </svg>
           ) : (
             <svg
-              width="20"
-              height="20"
+              width="18"
+              height="18"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="1.8"
+              strokeWidth="1.6"
               strokeLinecap="round"
               strokeLinejoin="round"
+              aria-hidden="true"
             >
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-              <circle cx="12" cy="13" r="4" />
+              <path d="M21 15.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3.5" />
+              <path d="M7 10l5-5 5 5" />
+              <path d="M12 5v12" />
             </svg>
           )}
         </button>
@@ -121,38 +131,42 @@ export function Composer({
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              if (!disabled && value.trim().length > 0) onSubmit();
+              if (!sendDisabled) onSubmit();
             }
           }}
-          placeholder={placeholder ?? "escribe aquí..."}
+          placeholder={placeholder ?? "escribe aquí…"}
           rows={1}
-          className="font-hand min-h-[36px] flex-1 resize-none bg-transparent text-[24px] leading-[36px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-soft)]/70 focus:outline-none"
+          aria-label="escribí tu respuesta"
         />
+
         <button
-          type="button"
-          disabled={disabled || value.trim().length === 0}
-          onClick={onSubmit}
+          type="submit"
+          disabled={sendDisabled}
           aria-label="enviar"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-ink)] text-[var(--color-paper)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          className="send"
         >
           <svg
-            width="18"
-            height="18"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2.4"
+            strokeWidth="1.8"
             strokeLinecap="round"
             strokeLinejoin="round"
+            aria-hidden="true"
           >
-            <line x1="5" y1="12" x2="19" y2="12" />
-            <polyline points="13 6 19 12 13 18" />
+            <path d="M5 12h14" />
+            <path d="M13 6l6 6-6 6" />
           </svg>
         </button>
-      </div>
+      </form>
       {uploadError && (
-        <p className="mt-1 text-xs text-red-700">{uploadError}</p>
+        <span className="diary-composer-error">{uploadError}</span>
       )}
-    </div>
+      <span className="diary-composer-meta">
+        enter envía · shift+enter nueva línea
+      </span>
+    </>
   );
 }
