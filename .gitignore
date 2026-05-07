@@ -51,3 +51,5 @@ next-env.d.ts
 # harness artefactos por run (specs, changes, verdicts, logs)
 .harness/
 .harness-design/
+.landing-draft/
+.diario-draft/
