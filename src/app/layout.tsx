@@ -1,5 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Caveat, Lora } from "next/font/google";
+import {
+  Caveat,
+  Lora,
+  Bricolage_Grotesque,
+  Space_Grotesk,
+  JetBrains_Mono,
+} from "next/font/google";
 import "./globals.css";
 
 const caveat = Caveat({
@@ -11,6 +17,24 @@ const caveat = Caveat({
 const lora = Lora({
   subsets: ["latin"],
   variable: "--font-serif",
+  display: "swap",
+});
+
+const bricolage = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-grotesk",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
   display: "swap",
 });
 
@@ -32,7 +56,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${caveat.variable} ${lora.variable}`}>
+    <html
+      lang="es"
+      className={`${caveat.variable} ${lora.variable} ${bricolage.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
+    >
       <body className="min-h-screen">{children}</body>
     </html>
   );

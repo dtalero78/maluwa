@@ -12,12 +12,40 @@
   --color-line: #e6dec9;
 
   --font-sans: var(--font-serif), "Lora", ui-serif, Georgia, "Times New Roman", serif;
-  --font-display: var(--font-hand), "Caveat", "Patrick Hand", ui-serif, Georgia, serif;
+}
+
+/* Paleta zine — exclusiva de la landing. NO pisa --color-* del resto del sitio. */
+:root {
+  --landing-paper: #f4ecd6;
+  --landing-paper-2: #ebe1c2;
+  --landing-ink: #1a1612;
+  --landing-ink-soft: #4a4036;
+  --landing-acid: #ffbd59;
+  --landing-hot: #ff3868;
+  --landing-blue: #38b6ff;
+
+  --landing-shadow-sm: 3px 3px 0 0 var(--landing-ink);
+  --landing-shadow-md: 5px 5px 0 0 var(--landing-ink);
+  --landing-shadow-lg: 8px 8px 0 0 var(--landing-ink);
 }
 
 .font-hand {
   font-family: var(--font-hand), "Caveat", "Patrick Hand", ui-serif, Georgia,
     serif;
+}
+
+.font-display {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+
+.font-grotesk {
+  font-family: var(--font-grotesk), system-ui, sans-serif;
+}
+
+.font-mono {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 html, body {
@@ -66,3 +94,328 @@ html, body {
 .typing-dot { animation: pulse-dot 1.2s infinite ease-in-out; }
 .typing-dot:nth-child(2) { animation-delay: 0.15s; }
 .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   LANDING (zine de barrio) — estilos scopeados a `.landing-root`
+   No tocan otras páginas.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.landing-root {
+  background-color: var(--landing-paper);
+  color: var(--landing-ink);
+  font-family: var(--font-grotesk), system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.5;
+  background-image: radial-gradient(circle at 1px 1px, rgba(26, 22, 18, 0.07) 1px, transparent 0);
+  background-size: 22px 22px;
+  overflow-x: hidden;
+}
+
+.landing-root a { color: inherit; text-decoration: none; }
+
+/* Tipografías helper internas */
+.landing-display { font-family: var(--font-display), system-ui, sans-serif; font-weight: 800; letter-spacing: -0.035em; }
+.landing-hand { font-family: var(--font-hand), "Caveat", cursive; font-weight: 700; }
+.landing-mono { font-family: var(--font-mono), ui-monospace, monospace; }
+
+/* Pulse para live dots y similares */
+@keyframes landing-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.landing-pulse { animation: landing-pulse 1.5s infinite; }
+
+/* Marquee infinito */
+@keyframes landing-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.landing-marquee-track {
+  display: inline-block;
+  animation: landing-scroll 55s linear infinite;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.005em;
+  padding-left: 170px;
+  white-space: nowrap;
+}
+.landing-marquee-track .item { display: inline-block; margin: 0 30px; }
+.landing-marquee-track .price { color: var(--landing-acid); font-weight: 700; }
+.landing-marquee-track .sep { color: var(--landing-hot); margin: 0 14px; font-size: 1.1em; }
+.landing-marquee-track .sep.b { color: var(--landing-blue); }
+
+.landing-footer-marquee-track {
+  display: inline-block;
+  animation: landing-scroll 80s linear infinite;
+  white-space: nowrap;
+}
+.landing-footer-marquee-track span { margin: 0 18px; }
+.landing-footer-marquee-track .dot { color: var(--landing-hot); }
+.landing-footer-marquee-track .dot.b { color: var(--landing-blue); }
+
+/* Highlight gradient (acid) — Tailwind no expresa esto limpio */
+.landing-hl {
+  background: linear-gradient(transparent 28%, var(--landing-acid) 28%, var(--landing-acid) 82%, transparent 82%);
+  padding: 0 6px;
+}
+
+/* H1 hero con cursive rotado */
+.landing-h1-scribble {
+  font-family: var(--font-hand), "Caveat", cursive;
+  font-weight: 700;
+  color: var(--landing-hot);
+  display: inline-block;
+  transform: rotate(-3deg) translateY(-6px);
+  position: relative;
+  font-size: 1em;
+  line-height: 0.78;
+  letter-spacing: 0;
+}
+@media (max-width: 880px) {
+  .landing-h1-scribble { transform: rotate(-3deg) translateY(-3px); line-height: 0.82; }
+}
+
+/* Underline azul sub-headline */
+.landing-ul-blue {
+  text-decoration: underline;
+  text-decoration-color: var(--landing-blue);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 4px;
+}
+
+/* Botón neobrutalista (hover translate + shadow shrink) */
+.landing-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 24px;
+  background: var(--landing-ink);
+  color: var(--landing-paper);
+  font-weight: 700;
+  font-size: 17px;
+  border-radius: 8px;
+  border: 1.5px solid var(--landing-ink);
+  box-shadow: var(--landing-shadow-md);
+  transition: transform 0.1s, box-shadow 0.1s;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: none;
+}
+.landing-btn:hover { transform: translate(2px, 2px); box-shadow: 2px 2px 0 0 var(--landing-ink); }
+.landing-btn.acid { background: var(--landing-acid); color: var(--landing-ink); }
+.landing-btn .em { font-size: 22px; line-height: 0; transition: transform 0.2s; }
+.landing-btn:hover .em { transform: translateX(4px); }
+
+.landing-btn-sm {
+  background: var(--landing-ink);
+  color: var(--landing-paper);
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 6px;
+  border: 1.5px solid var(--landing-ink);
+  box-shadow: var(--landing-shadow-sm);
+  transition: transform 0.1s, box-shadow 0.1s;
+  display: inline-block;
+  text-decoration: none;
+}
+.landing-btn-sm:hover {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 0 var(--landing-ink);
+  color: var(--landing-paper);
+}
+
+/* Eyebrow chip (mono) */
+.landing-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--landing-ink);
+  color: var(--landing-paper);
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  font-family: var(--font-mono), ui-monospace, monospace;
+}
+.landing-eyebrow .arrow { color: var(--landing-blue); font-weight: 700; }
+
+/* Stickers (hero + footer) */
+.landing-sticker {
+  position: absolute;
+  font-family: var(--font-hand), "Caveat", cursive;
+  font-weight: 700;
+  background: var(--landing-acid);
+  color: var(--landing-ink);
+  padding: 10px 16px;
+  border: 1.5px solid var(--landing-ink);
+  border-radius: 4px;
+  box-shadow: var(--landing-shadow-sm);
+  font-size: 22px;
+  line-height: 1.05;
+}
+.landing-sticker.pink { background: var(--landing-hot); color: var(--landing-paper); }
+.landing-sticker.blue { background: var(--landing-blue); color: var(--landing-ink); }
+
+/* Job price chips (varían por nth-child) */
+.landing-job-price {
+  display: inline-block;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  background: var(--landing-acid);
+  padding: 5px 12px;
+  border: 1.5px solid var(--landing-ink);
+  transform: rotate(-1.5deg);
+  letter-spacing: -0.02em;
+}
+.landing-job:nth-child(2) .landing-job-price { background: var(--landing-blue); transform: rotate(1.2deg); }
+.landing-job:nth-child(3) .landing-job-price { transform: rotate(-2deg); }
+.landing-job:nth-child(4) .landing-job-price { background: var(--landing-hot); color: var(--landing-paper); transform: rotate(1.5deg); }
+
+/* Step numbers (3-pasos) — el segundo va relleno azul + stroke */
+.landing-step:nth-child(2) .landing-step-num {
+  color: var(--landing-blue);
+  -webkit-text-stroke: 1.5px var(--landing-ink);
+}
+.landing-step:nth-child(2) .landing-step-num .slash {
+  color: var(--landing-ink);
+  -webkit-text-stroke: 0;
+}
+.landing-step:nth-child(3) .landing-step-num .slash { color: var(--landing-acid); }
+@media (max-width: 880px) {
+  .landing-step:nth-child(2) .landing-step-num { -webkit-text-stroke: 1px var(--landing-ink); }
+}
+
+/* Step hover background */
+.landing-step {
+  transition: background 0.2s;
+  grid-template-columns: 80px 1fr;
+}
+.landing-step:hover { background: rgba(255, 189, 89, 0.22); }
+.landing-step:nth-child(2):hover { background: rgba(56, 182, 255, 0.18); }
+@media (min-width: 768px) {
+  .landing-step {
+    grid-template-columns: 160px 1fr auto;
+  }
+}
+
+/* FAQ guiones por color (1, 2, 4, 6) */
+.landing-faq-q::before { content: "— "; color: var(--landing-hot); }
+.landing-faq-item:nth-child(2) .landing-faq-q::before { color: var(--landing-blue); }
+.landing-faq-item:nth-child(4) .landing-faq-q::before { color: var(--landing-acid); }
+.landing-faq-item:nth-child(6) .landing-faq-q::before { color: var(--landing-blue); }
+
+/* CTA final: el botón usa shadow paper en vez de ink */
+.landing-final-btn {
+  background: var(--landing-acid);
+  color: var(--landing-ink);
+  border: 1.5px solid var(--landing-acid);
+  font-size: 21px;
+  padding: 22px 36px;
+  box-shadow: 6px 6px 0 0 var(--landing-paper);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  border-radius: 8px;
+  transition: transform 0.1s, box-shadow 0.1s;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.landing-final-btn:hover {
+  transform: translate(2px, 2px);
+  box-shadow: 3px 3px 0 0 var(--landing-paper);
+}
+.landing-final-btn .em { font-size: 22px; line-height: 0; transition: transform 0.2s; }
+.landing-final-btn:hover .em { transform: translateX(4px); }
+
+/* Marquee label "LIVE · DEL PAÍS" — fade contra el ink track */
+.landing-marquee-label::before {
+  content: "";
+  width: 7px; height: 7px;
+  background: var(--landing-paper);
+  border-radius: 50%;
+  animation: landing-pulse 1.5s infinite;
+  display: inline-block;
+}
+.landing-marquee-label::after {
+  content: "";
+  position: absolute;
+  left: 100%;
+  top: 0; bottom: 0;
+  width: 36px;
+  background: linear-gradient(to right, var(--landing-ink) 0%, var(--landing-ink) 35%, rgba(26, 22, 18, 0) 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+@media (max-width: 880px) {
+  .landing-marquee-label::after { width: 22px; }
+}
+
+/* Footer sticker backing fade */
+.landing-f-sticker {
+  position: absolute;
+  font-family: var(--font-hand), "Caveat", cursive;
+  font-weight: 700;
+  padding: 8px 14px;
+  border: 1.5px solid var(--landing-ink);
+  border-radius: 4px;
+  box-shadow: var(--landing-shadow-sm);
+  font-size: 18px;
+  line-height: 1.05;
+  background: var(--landing-acid);
+  color: var(--landing-ink);
+  pointer-events: auto;
+}
+.landing-f-sticker.pink { background: var(--landing-hot); color: var(--landing-paper); }
+.landing-f-sticker.blue { background: var(--landing-blue); color: var(--landing-ink); }
+.landing-f-sticker::before {
+  content: "";
+  position: absolute;
+  inset: -6px -8px;
+  background: var(--landing-paper);
+  border-radius: 8px;
+  z-index: -1;
+  filter: blur(4px);
+  opacity: 0.85;
+}
+
+/* Footer column links — underline hover */
+.landing-footer-link {
+  font-size: 15px;
+  border-bottom: 1.5px solid transparent;
+  transition: border-color 0.15s, color 0.15s;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.landing-footer-link:hover { color: var(--landing-hot); border-bottom-color: var(--landing-hot); }
+.landing-footer-link .arr { color: var(--landing-blue); font-weight: 700; }
+
+/* Mobile bottom nav */
+.landing-mob-nav-item {
+  flex: 1;
+  text-align: center;
+  color: var(--landing-paper);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 9px 4px;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
+}
+.landing-mob-nav-item.cta { background: var(--landing-acid); color: var(--landing-ink); }
+.landing-mob-nav-item:active { background: var(--landing-blue); color: var(--landing-ink); }
+
+/* Job hover */
+.landing-job { transition: background 0.15s; }
+.landing-job:hover { background: var(--landing-paper-2); }
+
+/* Topbar nav hover hot */
+.landing-topbar-nav a { font-weight: 500; transition: color 0.15s; }
+.landing-topbar-nav a:hover { color: var(--landing-hot); }
