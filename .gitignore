@@ -44,3 +44,10 @@ next-env.d.ts
 # Playwright dev artifacts (screenshots tomados durante desarrollo)
 .playwright-mcp/
 /*.png
+
+# app-tutorial-video skill workspace
+.tutorial-video/
+
+# harness artefactos por run (specs, changes, verdicts, logs)
+.harness/
+.harness-design/
