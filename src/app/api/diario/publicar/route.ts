@@ -27,7 +27,6 @@ import {
   insertPublishedPage,
   claimJournalForUser,
   recordNotification,
-  updatePublishedPageByJournal,
   verifyPassword,
   getPublishedPageByUser,
   updatePublishedPageById,
@@ -60,6 +59,14 @@ interface JournalRow {
   status: string;
   published_url: string | null;
   entries_json: DiaryEntry[];
+  // Datos del onboarding — null en journals legacy.
+  student_name: string | null;
+  student_age: number | null;
+  student_city: string | null;
+  student_school: string | null;
+  parent_email: string | null;
+  parent_name: string | null;
+  consented_at: string | null;
 }
 
 export async function POST(req: Request) {
@@ -72,12 +79,15 @@ export async function POST(req: Request) {
   // sesiones que crearon nuevos journals tras publicar). Prioridad para
   // el que tenga user_id (ya publicado); si hay drafts más recientes,
   // sus entries son la fuente de verdad para el HTML.
-  const allRes = await query<JournalRow>(
-    `SELECT id, user_id, status, published_url, entries_json, updated_at
-     FROM journals WHERE anon_token = $1
-     ORDER BY updated_at DESC`,
-    [anonToken],
-  );
+  //
+  // Defensa contra deploys parciales: si las columnas del onboarding
+  // todavía no existen en la DB (migración 0002_onboarding pendiente de
+  // aplicar), el SELECT extendido falla con 42703 ("undefined column").
+  // En ese caso reintentamos con el SELECT legacy (sin las columnas) y
+  // tratamos el journal como pre-onboarding — el flujo viejo sigue 100%
+  // operativo. Cuando el operador aplique la migración, el primer SELECT
+  // empieza a funcionar y volvemos al flujo nuevo sin redeploy.
+  const allRes = await selectJournalsByAnonToken(anonToken);
   if (allRes.rows.length === 0) return bad("no encontramos tu diario");
 
   // Journal "principal" = el claimado si existe, sino el más reciente.
@@ -146,19 +156,45 @@ export async function POST(req: Request) {
     );
   }
 
-  // FLUJO 1 — primera publicación. Validar todo el formulario.
+  // FLUJO 1 — primera publicación.
+  //
+  // Si el journal pasó por el onboarding (`/empezar`), reusamos los datos
+  // capturados (nombre, edad, ciudad, colegio, email del acudiente) y el
+  // consentimiento ya quedó marcado en `consented_at`. El modal de
+  // publicar solo necesita email + password + slug. Si NO pasó (legacy:
+  // chico que tenía cookie de antes del onboarding), exigimos el form
+  // completo como antes.
+  const hasOnboarding =
+    !!journal.student_name &&
+    typeof journal.student_age === "number" &&
+    !!journal.consented_at;
+
   const errors: string[] = [];
   if (!body.email || !EMAIL_RE.test(body.email)) errors.push("email invalido");
   if (!body.password || body.password.length < 6)
     errors.push("password muy corto (mínimo 6)");
   if (!body.slug || !SLUG_RE.test(body.slug))
     errors.push("slug invalido (solo letras minúsculas, números y guiones)");
-  if (!body.parent_email || !EMAIL_RE.test(body.parent_email))
-    errors.push("email del padre/tutor invalido");
-  if (typeof body.age !== "number" || body.age < 8 || body.age > 25)
-    errors.push("edad fuera de rango");
-  if (body.accepted_terms !== true) errors.push("debes aceptar los términos");
+
+  if (!hasOnboarding) {
+    if (!body.parent_email || !EMAIL_RE.test(body.parent_email))
+      errors.push("email del padre/tutor invalido");
+    if (typeof body.age !== "number" || body.age < 8 || body.age > 25)
+      errors.push("edad fuera de rango");
+    if (body.accepted_terms !== true) errors.push("debes aceptar los términos");
+  }
   if (errors.length) return bad(errors.join(", "));
+
+  // Datos efectivos del estudiante: si hay onboarding, los del journal
+  // mandan sobre los del body (el chico no los va a re-tipear). Si no,
+  // los del body como antes.
+  const effStudentName = hasOnboarding ? journal.student_name : body.name ?? null;
+  const effAge = hasOnboarding ? journal.student_age : body.age;
+  const effCity = hasOnboarding ? journal.student_city : body.city ?? null;
+  const effSchool = hasOnboarding ? journal.student_school : body.school ?? null;
+  const effParentEmail = hasOnboarding
+    ? journal.parent_email
+    : body.parent_email ?? null;
 
   const email = body.email!.toLowerCase().trim();
   const slug = body.slug!;
@@ -226,11 +262,11 @@ export async function POST(req: Request) {
   const user = await createUser({
     email,
     password: body.password!,
-    name: body.name,
-    age: body.age,
-    city: body.city,
-    school: body.school,
-    parentEmail: body.parent_email,
+    name: effStudentName ?? undefined,
+    age: typeof effAge === "number" ? effAge : undefined,
+    city: effCity ?? undefined,
+    school: effSchool ?? undefined,
+    parentEmail: effParentEmail ?? undefined,
   });
 
   const publishedUrl = `/u/${slug}`;
@@ -245,26 +281,30 @@ export async function POST(req: Request) {
   await claimJournalForUser(journal.id, user.id, publishedUrl, title);
   await setUserCookie(user.id);
 
-  // Aviso al padre — best-effort.
+  // Aviso al padre — best-effort. Si el chico (onboarding, edad >=14) no
+  // dio email del acudiente, simplemente no se manda nada y no se
+  // registra el intento (no hay nada que auditar).
   const fullUrl = `https://maluwa.app${publishedUrl}`;
-  try {
-    const result = await notifyParent({
-      parentEmail: body.parent_email!,
-      studentName: body.name ?? null,
-      studentEmail: email,
-      publicUrl: fullUrl,
-    });
-    await recordNotification({
-      userId: user.id,
-      kind: "parent_publish_notice",
-      toEmail: body.parent_email!,
-      subject: result.subject,
-      ok: result.ok,
-      reason: result.reason,
-      providerId: result.providerId,
-    });
-  } catch (err) {
-    console.error("[publicar] notify+record threw:", err);
+  if (effParentEmail) {
+    try {
+      const result = await notifyParent({
+        parentEmail: effParentEmail,
+        studentName: effStudentName,
+        studentEmail: email,
+        publicUrl: fullUrl,
+      });
+      await recordNotification({
+        userId: user.id,
+        kind: "parent_publish_notice",
+        toEmail: effParentEmail,
+        subject: result.subject,
+        ok: result.ok,
+        reason: result.reason,
+        providerId: result.providerId,
+      });
+    } catch (err) {
+      console.error("[publicar] notify+record threw:", err);
+    }
   }
 
   return NextResponse.json({ ok: true, url: publishedUrl, fullUrl });
@@ -272,4 +312,85 @@ export async function POST(req: Request) {
 
 function bad(message: string) {
   return NextResponse.json({ ok: false, error: message }, { status: 400 });
+}
+
+/**
+ * SELECT defensivo: intenta traer las columnas del onboarding y, si no
+ * existen aún en la DB (migración 0002 pendiente), cae al SELECT legacy
+ * y rellena los campos nuevos con null. De esa forma el endpoint nunca
+ * devuelve 500 por un schema desactualizado: simplemente trata al
+ * journal como legacy hasta que el DBA corra `npm run db:migrate:onboarding`.
+ *
+ * Cacheamos la decisión en memoria del proceso (`onboardingCols`) para
+ * no pagar el `try/catch` ni un round-trip extra por cada request.
+ */
+let onboardingCols: boolean | null = null;
+
+interface JournalRowDb {
+  id: string;
+  user_id: string | null;
+  status: string;
+  published_url: string | null;
+  entries_json: DiaryEntry[];
+  student_name?: string | null;
+  student_age?: number | null;
+  student_city?: string | null;
+  student_school?: string | null;
+  parent_email?: string | null;
+  parent_name?: string | null;
+  consented_at?: string | null;
+  updated_at: string;
+}
+
+async function selectJournalsByAnonToken(
+  anonToken: string,
+): Promise<{ rows: JournalRow[] }> {
+  const SELECT_NEW = `SELECT id, user_id, status, published_url, entries_json,
+            student_name, student_age, student_city, student_school,
+            parent_email, parent_name, consented_at, updated_at
+     FROM journals WHERE anon_token = $1
+     ORDER BY updated_at DESC`;
+  const SELECT_LEGACY = `SELECT id, user_id, status, published_url, entries_json, updated_at
+     FROM journals WHERE anon_token = $1
+     ORDER BY updated_at DESC`;
+
+  // Si ya sabemos que las columnas no existen, ahorramos el round-trip.
+  if (onboardingCols === false) {
+    const res = await query<JournalRowDb>(SELECT_LEGACY, [anonToken]);
+    return { rows: res.rows.map(toJournalRow) };
+  }
+  try {
+    const res = await query<JournalRowDb>(SELECT_NEW, [anonToken]);
+    onboardingCols = true;
+    return { rows: res.rows.map(toJournalRow) };
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    if (code === "42703") {
+      // Columnas faltantes — migración 0002_onboarding sin aplicar.
+      onboardingCols = false;
+      console.warn(
+        "[publicar] onboarding columns missing on maluwa.journals; falling back to legacy SELECT. Run `npm run db:migrate:onboarding`.",
+      );
+      const res = await query<JournalRowDb>(SELECT_LEGACY, [anonToken]);
+      return { rows: res.rows.map(toJournalRow) };
+    }
+    throw err;
+  }
+}
+
+function toJournalRow(r: JournalRowDb): JournalRow {
+  return {
+    id: r.id,
+    user_id: r.user_id,
+    status: r.status,
+    published_url: r.published_url,
+    entries_json: r.entries_json,
+    student_name: r.student_name ?? null,
+    student_age: r.student_age ?? null,
+    student_city: r.student_city ?? null,
+    student_school: r.student_school ?? null,
+    parent_email: r.parent_email ?? null,
+    parent_name: r.parent_name ?? null,
+    consented_at: r.consented_at ?? null,
+  };
 }

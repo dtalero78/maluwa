@@ -129,3 +129,18 @@ DROP TRIGGER IF EXISTS trg_users_touch ON maluwa.users;
 CREATE TRIGGER trg_users_touch
   BEFORE UPDATE ON maluwa.users
   FOR EACH ROW EXECUTE FUNCTION maluwa.touch_updated_at();
+
+-- =====================================================================
+-- Onboarding (MVP §2.1 / Ley 1581): datos del estudiante y del acudiente
+-- capturados ANTES de empezar a usar el diario. consent_version permite
+-- auditar qué versión de la política aceptó si la cambiamos.
+-- =====================================================================
+ALTER TABLE maluwa.journals
+  ADD COLUMN IF NOT EXISTS student_name    text,
+  ADD COLUMN IF NOT EXISTS student_age     int,
+  ADD COLUMN IF NOT EXISTS student_city    text,
+  ADD COLUMN IF NOT EXISTS student_school  text,
+  ADD COLUMN IF NOT EXISTS parent_email    text,
+  ADD COLUMN IF NOT EXISTS parent_name     text,
+  ADD COLUMN IF NOT EXISTS consented_at    timestamptz,
+  ADD COLUMN IF NOT EXISTS consent_version text DEFAULT 'v1';

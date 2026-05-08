@@ -235,7 +235,7 @@ export default function Landing() {
             <span className="landing-pulse inline-block h-2 w-2 rounded-full bg-[var(--landing-hot)]" />
             <span>1.247 parceros conectados</span>
           </div>
-          <Link href="/diario/demo" className="landing-btn-sm">
+          <Link href="/empezar" className="landing-btn-sm">
             arrancá →
           </Link>
         </div>
@@ -250,7 +250,7 @@ export default function Landing() {
         <Link href="#jobs" className="landing-mob-nav-item">qué vendés</Link>
         <Link href="#cosa" className="landing-mob-nav-item">cómo</Link>
         <Link href="#faq" className="landing-mob-nav-item">preguntas</Link>
-        <Link href="/diario/demo" className="landing-mob-nav-item cta">
+        <Link href="/empezar" className="landing-mob-nav-item cta">
           arrancá →
         </Link>
       </nav>
@@ -351,7 +351,7 @@ export default function Landing() {
           </p>
 
           <div className="relative flex flex-wrap items-center gap-4">
-            <Link href="/diario/demo" className="landing-btn acid">
+            <Link href="/empezar" className="landing-btn acid">
               arrancá ya <span className="em">→</span></Link>
             <Link
               href="#chat"
@@ -789,7 +789,7 @@ export default function Landing() {
             tan simple como hablarle a un parcero que sabe convertir ideas en
             proyectos. arrancá hoy — mañana tenés algo pa mostrar.
           </p>
-          <Link href="/diario/demo" className="landing-final-btn">
+          <Link href="/empezar" className="landing-final-btn">
             empezar a crear <span className="em">→</span>
           </Link>
           <div className="mt-7">
@@ -921,7 +921,7 @@ export default function Landing() {
                 </Link>
               </li>
               <li>
-                <Link href="/diario/demo" className="landing-footer-link">
+                <Link href="/empezar" className="landing-footer-link">
                   <span className="arr">›</span>arrancar
                 </Link>
               </li>

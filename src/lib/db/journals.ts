@@ -23,6 +23,16 @@ export interface JournalRow {
   entries_json: DiaryEntry[];
   created_at: string;
   updated_at: string;
+  // Onboarding (Ley 1581 / MVP §2.1) — pueden venir null en journals
+  // legacy creados antes de que existiera /empezar.
+  student_name: string | null;
+  student_age: number | null;
+  student_city: string | null;
+  student_school: string | null;
+  parent_email: string | null;
+  parent_name: string | null;
+  consented_at: string | null;
+  consent_version: string | null;
 }
 
 /**
@@ -71,6 +81,86 @@ export async function updateJournalEntries(
     `UPDATE journals SET entries_json = $2::jsonb WHERE id = $1`,
     [id, JSON.stringify(entries)],
   );
+}
+
+/**
+ * Persiste los datos del onboarding (Ley 1581 / MVP §2.1) sobre el journal
+ * del `anonToken`. Si el journal ya existe, hace UPDATE; si no, INSERT con
+ * `entries_json='[]'` (la página `/diario/[id]` stampa el opening del tutor
+ * cuando encuentra entries vacío).
+ *
+ * Idempotente: dos submits del mismo onboarding sobre la misma cookie
+ * actualizan la misma fila — no duplican.
+ */
+export interface OnboardingPayload {
+  studentName: string;
+  studentAge: number;
+  studentCity: string;
+  studentSchool: string | null;
+  parentEmail: string | null;
+  parentName: string | null;
+  consentVersion: string; // 'v1'
+}
+
+export async function saveOnboardingForAnonToken(
+  anonToken: string,
+  data: OnboardingPayload,
+): Promise<{ id: string; created: boolean }> {
+  // UPDATE primero: priorizamos un journal con user_id (publicado) si
+  // existe, sino el draft más reciente — mismo orden que
+  // getOrCreateJournalByAnonToken para no pisar el journal "real" del chico.
+  const updated = await query<{ id: string }>(
+    `UPDATE journals
+     SET student_name    = $2,
+         student_age     = $3,
+         student_city    = $4,
+         student_school  = $5,
+         parent_email    = $6,
+         parent_name     = $7,
+         consented_at    = now(),
+         consent_version = $8
+     WHERE id = (
+       SELECT id FROM journals
+       WHERE anon_token = $1
+       ORDER BY (user_id IS NOT NULL) DESC, updated_at DESC
+       LIMIT 1
+     )
+     RETURNING id`,
+    [
+      anonToken,
+      data.studentName,
+      data.studentAge,
+      data.studentCity,
+      data.studentSchool,
+      data.parentEmail,
+      data.parentName,
+      data.consentVersion,
+    ],
+  );
+  if (updated.rows.length > 0) {
+    return { id: updated.rows[0].id, created: false };
+  }
+
+  const inserted = await query<{ id: string }>(
+    `INSERT INTO journals (
+       anon_token, entries_json,
+       student_name, student_age, student_city, student_school,
+       parent_email, parent_name, consented_at, consent_version
+     )
+     VALUES ($1, '[]'::jsonb, $2, $3, $4, $5, $6, $7, now(), $8)
+     RETURNING id`,
+    [
+      anonToken,
+      data.studentName,
+      data.studentAge,
+      data.studentCity,
+      data.studentSchool,
+      data.parentEmail,
+      data.parentName,
+      data.consentVersion,
+    ],
+  );
+  return { id: inserted.rows[0].id, created: true };
 }
 
 /**
