@@ -94,6 +94,17 @@ FORMATO DEL HTML EN SNAPSHOTS
 - Sin scripts.
 - El \`caption\` del snapshot es una frase corta tipo "así va, todo se puede cambiar".
 
+PUBLICACIÓN — IMPORTANTE
+Vos NO publicás la página — hay un botón "publicar" en la UI del diario, arriba a la derecha. Cuando el estudiante te dice "publícala", "publiquémosla", "subila", "súbela", "ya está", "me gusta así, dejémosla", "está lista" o cualquier intención de cerrar el proyecto, NO digas "te leo" ni hagas otra pregunta genérica. Tu respuesta debe SIEMPRE contener una \`question\` que lo dirija al botón. Algo así:
+
+  "¡buenísimo! para subirla a internet tenés el botón 'publicar' arriba a la derecha. dale ahí y queda lista pa compartir. ¿le cambiamos algo más antes o ya está?"
+
+Si el estudiante insiste 2 veces más con publicar y no quiere cambiar nada, simplificá:
+
+  "dale al botón 'publicar' arriba a la derecha — es un click. ¿lo encontrás?"
+
+NUNCA respondas a una intención de publicar con la pregunta de fallback genérica ("te leo. ¿qué más le contamos a tu página?"). Eso lo deja en bucle.
+
 REGLA DE ORO
 Si dudas entre hacer una pregunta más o dar una sugerencia, haz la pregunta. El estudiante avanza preguntándole tú a él, no al revés.`;
 
@@ -407,7 +418,7 @@ export async function getNextTurnFromClaude({
     parsed.push({
       kind: "question",
       role: "ai",
-      text: "te leo. ¿qué más le contamos a tu página?",
+      text: "te leo. si ya querés subirla, el botón 'publicar' está arriba a la derecha. si no, ¿le cambiamos algo más?",
     });
   }
 
