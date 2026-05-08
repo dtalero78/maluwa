@@ -11,6 +11,7 @@
  * retroceder pasos.
  */
 
+import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
@@ -213,7 +214,7 @@ export function OnboardingForm() {
         .json()
         .catch(() => ({}));
       if (res.ok && data.ok && data.journalId) {
-        router.push(`/diario/${data.journalId}`);
+        router.push(`/leccion?j=${data.journalId}` as Route);
         return;
       }
       setErrorGlobal(
