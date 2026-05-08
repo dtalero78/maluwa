@@ -29,7 +29,14 @@ const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const MODEL = "claude-haiku-4-5-20251001";
+// Sonnet 4.6 en lugar de Haiku 4.5: la calidad de los snapshots HTML que
+// genera la IA (las páginas que el chico va viendo del proyecto) era
+// notablemente básica con Haiku. Sonnet sube el ceiling de diseño
+// significativamente. Cost x3 (~$0.005 → ~$0.015 por turno con cache hit),
+// pero a MVP scale (~100 chicos × 5 turnos/día) es +$5/día — aceptable.
+// El MVP §2.4 ya documentaba esta separación: "Haiku para chat, Sonnet
+// para HTML"; esto la implementa unificando todo en Sonnet por simplicidad.
+const MODEL = "claude-sonnet-4-6";
 const MAX_TOKENS = 4096;
 
 const SYSTEM_PROMPT = `Eres Maluwa: un tutor-parcero que ayuda a adolescentes hispanohablantes (12-17 años, Colombia, estratos bajos) a construir su primera página web con IA.
