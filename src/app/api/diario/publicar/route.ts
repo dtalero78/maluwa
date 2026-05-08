@@ -32,6 +32,7 @@ import {
   getPublishedPageByUser,
   updatePublishedPageById,
 } from "@/lib/db/users";
+import { setUserCookie } from "@/lib/auth/session";
 import { notifyParent } from "@/lib/email/notify-parent";
 import type { DiaryEntry, SnapshotEntry } from "@/lib/diario/types";
 
@@ -127,6 +128,9 @@ export async function POST(req: Request) {
         `/u/${page.slug}`,
         title,
       );
+      // Re-emitir cookie de sesión por si no la tenía (p.ej. usuario que
+      // publicó antes de que existiera este feature, o que la perdió).
+      await setUserCookie(journal.user_id);
       return NextResponse.json({
         ok: true,
         url: `/u/${page.slug}`,
@@ -185,6 +189,7 @@ export async function POST(req: Request) {
         `/u/${page.slug}`,
         title,
       );
+      await setUserCookie(verified.id);
       return NextResponse.json({
         ok: true,
         url: `/u/${page.slug}`,
@@ -206,6 +211,7 @@ export async function POST(req: Request) {
       css: lastSnapshot.css,
     });
     await claimJournalForUser(journal.id, verified.id, publishedUrl, title);
+    await setUserCookie(verified.id);
     return NextResponse.json({
       ok: true,
       url: publishedUrl,
@@ -237,6 +243,7 @@ export async function POST(req: Request) {
     css: lastSnapshot.css,
   });
   await claimJournalForUser(journal.id, user.id, publishedUrl, title);
+  await setUserCookie(user.id);
 
   // Aviso al padre — best-effort.
   const fullUrl = `https://maluwa.app${publishedUrl}`;

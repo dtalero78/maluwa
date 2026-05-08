@@ -13,6 +13,29 @@ Una herramienta gratuita y open-source pensada para pelados de bachillerato de e
 - **Tutor IA integrado** que acompaña en cada paso.
 - **Voz cómplice**, no académica.
 
+## Variables de entorno
+
+Para correr el proyecto en local, `.env.local` debe tener al menos:
+
+```
+DATABASE_URL=postgres://...           # Postgres (DigitalOcean en prod)
+ANTHROPIC_API_KEY=sk-ant-...          # Claude (tutor del diario)
+RESEND_API_KEY=re_...                 # Email transaccional al padre
+MALUWA_FROM_EMAIL=noreply@maluwa.app  # Remitente verificado en Resend
+AUTH_SECRET=...                       # HMAC para cookie de login (32+ bytes)
+```
+
+Para generar `AUTH_SECRET`:
+
+```sh
+openssl rand -base64 32
+```
+
+Cualquier string aleatorio largo sirve. Si está vacío, los endpoints de
+auth (`/api/auth/login`, `/api/auth/logout`) y la lectura de la cookie
+de sesión fallan con error explícito. El build de Next no lo lee en
+module load, así que `next build` pasa sin esta variable seteada.
+
 ## Estado
 
 🚧 En diseño. Sin código todavía.

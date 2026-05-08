@@ -195,14 +195,47 @@ export async function recordNotification(input: {
 export async function getPublishedPageByUser(userId: string): Promise<{
   id: string;
   slug: string;
+  title: string | null;
+  created_at: string;
 } | null> {
-  const r = await query<{ id: string; slug: string }>(
-    `SELECT id, slug FROM published_pages
+  const r = await query<{
+    id: string;
+    slug: string;
+    title: string | null;
+    created_at: string;
+  }>(
+    `SELECT id, slug, title, created_at FROM published_pages
      WHERE user_id = $1
      ORDER BY created_at DESC LIMIT 1`,
     [userId],
   );
   return r.rows[0] ?? null;
+}
+
+/** Lookup de usuario por id — usado por el middleware/dashboard al
+ *  hidratar la sesión. Devuelve null si fue borrado. */
+export async function getUserById(userId: string): Promise<UserRow | null> {
+  const r = await query<UserRow>(
+    `SELECT id, email, name, age, city, school, parent_email,
+            created_at, updated_at
+     FROM users WHERE id = $1`,
+    [userId],
+  );
+  return r.rows[0] ?? null;
+}
+
+/** Journal más reciente del user (para el botón "continuar editando").
+ *  Devuelve null si no tiene ninguno asociado. */
+export async function getJournalIdByUser(
+  userId: string,
+): Promise<string | null> {
+  const r = await query<{ id: string }>(
+    `SELECT id FROM journals
+     WHERE user_id = $1
+     ORDER BY updated_at DESC LIMIT 1`,
+    [userId],
+  );
+  return r.rows[0]?.id ?? null;
 }
 
 /** Sobreescribe HTML/CSS/title de una published_page por su id (slug
