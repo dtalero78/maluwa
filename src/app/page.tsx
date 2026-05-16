@@ -413,8 +413,9 @@ export default function Landing() {
         <p
           className="-mt-5 mb-9 max-w-[640px] text-[16px] md:-mt-9"
         >
-          arrancan los negocios porque ahí está la plata fácil. pero también
-          podés hacer un{" "}
+          arrancás haciendo páginas pa los negocios de tu cuadra — ahí está la
+          plata fácil — y los valores que ves abajo son lo que{" "}
+          <strong>vos le cobrás al dueño.</strong> pero también podés hacer un{" "}
           <strong className="bg-[var(--landing-blue)] px-1 font-semibold">
             bot de whatsapp
           </strong>{" "}
@@ -422,8 +423,7 @@ export default function Landing() {
           <strong className="bg-[var(--landing-acid)] px-1 font-semibold">
             minijuego
           </strong>{" "}
-          pa vender a tus amigos, o lo que se te ocurra. la IA hace lo que le
-          pidas.
+          pa vender a tus amigos, o lo que se te ocurra.
         </p>
 
         <div
@@ -449,14 +449,19 @@ export default function Landing() {
               <p className="mb-[22px] text-[15px] leading-[1.5] opacity-80">
                 {job.p}
               </p>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span className="landing-job-price">{job.price}</span>
-                <span
-                  className="inline-flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--landing-ink)] bg-[var(--landing-paper-2)] px-2.5 py-1 font-mono text-[12px] font-bold tracking-wider"
-                >
-                  <span className="inline-block h-[7px] w-[7px] rounded-full bg-[var(--landing-blue)]" />
-                  {job.time}
+              <div className="flex flex-col gap-1">
+                <span className="font-mono text-[11px] font-bold uppercase tracking-wider opacity-50">
+                  esto es lo que tú puedes cobrar
                 </span>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className="landing-job-price">{job.price}</span>
+                  <span
+                    className="inline-flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--landing-ink)] bg-[var(--landing-paper-2)] px-2.5 py-1 font-mono text-[12px] font-bold tracking-wider"
+                  >
+                    <span className="inline-block h-[7px] w-[7px] rounded-full bg-[var(--landing-blue)]" />
+                    {job.time}
+                  </span>
+                </div>
               </div>
             </div>
           ))}
