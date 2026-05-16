@@ -441,9 +441,12 @@ export default function Landing() {
                 {job.tag}
               </span>
               <div className="mb-4 flex flex-col gap-1">
-                <span className="font-mono text-[11px] font-bold uppercase tracking-wider opacity-50">
+                <h3
+                  className="landing-display"
+                  style={{ fontSize: "28px", lineHeight: 1.05, letterSpacing: "-0.025em" }}
+                >
                   lo que puedes cobrar
-                </span>
+                </h3>
                 <div className="flex flex-wrap items-center gap-2.5">
                   <span className="landing-job-price">{job.price}</span>
                   <span
@@ -454,12 +457,11 @@ export default function Landing() {
                   </span>
                 </div>
               </div>
-              <h3
-                className="landing-display mb-3"
-                style={{ fontSize: "28px", lineHeight: 1.05, letterSpacing: "-0.025em" }}
+              <p
+                className="mb-2 text-[15px] font-semibold leading-[1.3] opacity-60"
               >
                 {job.h}
-              </h3>
+              </p>
               <p className="text-[15px] leading-[1.5] opacity-80">
                 {job.p}
               </p>
